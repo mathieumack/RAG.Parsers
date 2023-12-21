@@ -10,10 +10,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="Dotx\sample.dotx" />
+    <None Remove="TestFiles\sample.dotx" />
     <None Remove="MdFiles\0.md" />
     <None Remove="MdFiles\1.md" />
     <None Remove="MdFiles\images\sampleimagefromdalle.png" />
+    <None Remove="TestFiles\SimpleSheet.xlsx" />
   </ItemGroup>
 
   <ItemGroup>
@@ -27,7 +28,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="Dotx\sample.dotx">
+    <Content Include="TestFiles\sample.dotx">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="MdFiles\0.md">
@@ -39,10 +40,13 @@
     <Content Include="MdFiles\images\sampleimagefromdalle.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="TestFiles\SimpleSheet.xlsx">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\My.Converters.ToMardown\My.Converters.ToMardown.csproj" />
+    <ProjectReference Include="..\My.Converters.ToMarkdown\My.Converters.ToMarkdown.csproj" />
   </ItemGroup>
 
 </Project>

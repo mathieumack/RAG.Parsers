@@ -5,11 +5,11 @@ VisualStudioVersion = 17.0.32112.339
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Libraries", "Libraries", "{DF35D5BB-6544-4719-BA72-5AB3986A9C3F}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "My.Converters.ToMarkdown", "My.Converters.ToMardown\My.Converters.ToMarkdown.csproj", "{D3F625A4-B577-4B40-A2B7-084FF8CAC924}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "My.Converters.ToMarkdown", "My.Converters.ToMarkdown\My.Converters.ToMarkdown.csproj", "{D3F625A4-B577-4B40-A2B7-084FF8CAC924}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{469521A2-D12C-467D-B324-C5EF1F6FF85D}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "My.Converters.ToMarkdown.UnitTests", "My.Converters.ToMardown.UnitTests\My.Converters.ToMarkdown.UnitTests.csproj", "{C61BBAE5-33EF-487B-9F4A-589FBED124CE}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "My.Converters.ToMarkdown.UnitTests", "My.Converters.ToMarkdown.UnitTests\My.Converters.ToMarkdown.UnitTests.csproj", "{C61BBAE5-33EF-487B-9F4A-589FBED124CE}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
