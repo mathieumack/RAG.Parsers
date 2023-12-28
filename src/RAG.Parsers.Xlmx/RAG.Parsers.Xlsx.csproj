@@ -15,7 +15,7 @@
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <Description>Helper library that let you generate Excel document based on markdown files.</Description>
-    <PackageTags>devops;xlmx;markdown</PackageTags>
+    <PackageTags>devops;xlsx;markdown</PackageTags>
   </PropertyGroup>
 
 	<ItemGroup>

@@ -58,22 +58,22 @@ In **the** middle, [An hyperlink to ChatGPT](https://openai.com/chatgpt), but *n
 
 ```
 
-## RAG.Parsers.Xlmnx
+## RAG.Parsers.Xlsx
 
 ### Installation
 
 1. Add nuget package: 
 
-> Install-Package RAG.Parsers.Xlmx
+> Install-Package RAG.Parsers.Xlsx
 
-2. In your application, you must instanciate a new XlmxParser object, and call the method 'ExcelToMarkdown' with the path of your file to transform it to markdown string: 
+2. In your application, you must instanciate a new XlsxParser object, and call the method 'ExcelToMarkdown' with the path of your file to transform it to markdown string: 
 
 ```c#
 
-var xlmxParser = new XlmxParser();
+var xlsxParser = new XlsxParser();
 var filePath = Path.Combine(Environment.CurrentDirectory, "TestFiles/TestSample.xlsx");
 
-var result = xlmxParser.ExcelToMarkdown(filePath);
+var result = xlsxParser.ExcelToMarkdown(filePath);
 
 ```
 

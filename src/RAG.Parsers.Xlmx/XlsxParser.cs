@@ -4,12 +4,12 @@ using System.Linq;
 using System.Text;
 using ClosedXML.Excel;
 
-namespace RAG.Parsers.Xlmx
+namespace RAG.Parsers.Xlsx
 {
     /// <summary>
     /// Excel Decoder to Markdown
     /// </summary>
-    public class XlmxParser(bool withQuotes = true,
+    public class XlsxParser(bool withQuotes = true,
                                 string? worksheetNumberTemplate = null)
     {
         #region Properties
