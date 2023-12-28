@@ -64,7 +64,7 @@ In **the** middle, [An hyperlink to ChatGPT](https://openai.com/chatgpt), but *n
 
 1. Add nuget package: 
 
-> Install-Package RAG.Parsers.Xlmnx
+> Install-Package RAG.Parsers.Xlmx
 
 2. In your application, you must instanciate a new XlmxParser object, and call the method 'ExcelToMarkdown' with the path of your file to transform it to markdown string: 
 
