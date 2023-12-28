@@ -1,0 +1,32 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+    <ProjectGuid>{943DCCF2-EB1F-428E-8C36-8A069DA1D903}</ProjectGuid>
+    <TargetFrameworks>net7.0;net8.0</TargetFrameworks>
+    <Preview>true</Preview>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <LangVersion>preview</LangVersion>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+    <Authors>MACK Mathieu</Authors>
+    <Copyright>Copyright (c) MACK Mathieu</Copyright>
+    <PackageProjectUrl>https://github.com/mathieumack/RAG.Parsers</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/mathieumack/RAG.Parsers</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <Description>Helper library that let you generate Excel document based on markdown files.</Description>
+    <PackageTags>devops;xlmx;markdown</PackageTags>
+  </PropertyGroup>
+
+	<ItemGroup>
+		<None Include="..\..\README.md" Pack="true" PackagePath="\" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="ClosedXML" Version="0.102.1" />
+		<PackageReference Include="Markdig" Version="0.34.0" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="8.0.0" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />
+	</ItemGroup>
+</Project>

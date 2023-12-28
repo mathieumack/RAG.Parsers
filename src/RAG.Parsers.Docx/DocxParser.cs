@@ -7,12 +7,12 @@ using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 
-namespace My.Converters.ToMarkdown
+namespace RAG.Parsers.Docx
 {
     /// <summary>
-    /// Word Decoder to Markdown
+    /// Docx Decoder to Markdown
     /// </summary>
-    public class MsWordDecoder
+    public class DocxParser
     {
         #region Properties
 
@@ -31,13 +31,13 @@ namespace My.Converters.ToMarkdown
         /// </summary>
         /// <param name="filePath"></param>
         /// <returns></returns>
-        public string DocToText(string filePath)
+        public string DocToMarkdown(string filePath)
         {
             // Open file
             using var stream = File.OpenRead(filePath);
 
             // Convert file
-            return DocToText(stream);
+            return DocToMarkdown(stream);
         }
 
         /// <summary>
@@ -46,7 +46,7 @@ namespace My.Converters.ToMarkdown
         /// <param name="data"></param>
         /// <returns></returns>
         /// <exception cref="InvalidOperationException"></exception>
-        public string DocToText(Stream data)
+        public string DocToMarkdown(Stream data)
         {
             // Get file from stream
             var wordprocessingDocument = WordprocessingDocument.Open(data, false);
@@ -67,24 +67,18 @@ namespace My.Converters.ToMarkdown
 
                 // Explore file
                 var parts = mainPart.Document.Descendants().FirstOrDefault();
-                if (parts != null)
-                {
+                if (parts != null)                
                     // Explore all elements in file
                     foreach (var node in parts.ChildElements.Where(x => !string.IsNullOrEmpty(x.InnerText)))
                     {
-                        if (node is Paragraph paragraph)  
-                        {
+                        if (node is Paragraph paragraph)                          
                             // Process Text and paragraph
-                            ProcessParagraph(paragraph, ref sb);
-                        }
+                            ProcessParagraph(paragraph, ref sb);                        
 
-                        if (node is Table table)
-                        {
+                        if (node is Table table)                        
                             // Process Table
-                            ProcessTable(table, ref sb);
-                        }
-                    }
-                }
+                            ProcessTable(table, ref sb);                        
+                    }                
 
                 // Return text generated
                 return sb.ToString().Trim();
@@ -150,7 +144,7 @@ namespace My.Converters.ToMarkdown
         /// </summary>
         /// <param name="table"></param>
         /// <param name="sb"></param>
-        public void ProcessTable(Table table, ref StringBuilder sb)
+        public static void ProcessTable(Table table, ref StringBuilder sb)
         {
             var firstRow = true;
 
@@ -206,7 +200,7 @@ namespace My.Converters.ToMarkdown
         /// </summary>
         /// <param name="numberOfColumn"></param>
         /// <returns></returns>
-        public string BuildTableHeaderSeparator(int numberOfColumn)
+        public static string BuildTableHeaderSeparator(int numberOfColumn)
         {
             var row = "|";
             var headerRowSeparator = "---|";
@@ -236,7 +230,7 @@ namespace My.Converters.ToMarkdown
         /// <param name="element"></param>
         /// <param name="hyperlinks"></param>
         /// <returns></returns>
-        public string GetHyperlink(Hyperlink element, List<HyperlinkRelationship> hyperlinks)
+        public static string GetHyperlink(Hyperlink element, List<HyperlinkRelationship> hyperlinks)
         {
             var stringToReturn = "";
 
@@ -288,7 +282,7 @@ namespace My.Converters.ToMarkdown
         /// </summary>
         /// <param name="element"></param>
         /// <returns></returns>
-        public string GetLabelAndDecoration(OpenXmlElement element)
+        public static string GetLabelAndDecoration(OpenXmlElement element)
         {
             // Dispatcher
             return element.FirstChild switch
@@ -304,7 +298,7 @@ namespace My.Converters.ToMarkdown
         /// </summary>
         /// <param name="element"></param>
         /// <returns></returns>
-        public string GetLabelAndDecorationRunChild(OpenXmlElement element)
+        public static string GetLabelAndDecorationRunChild(OpenXmlElement element)
         {
             var stringToReturn = "";
 
@@ -357,7 +351,7 @@ namespace My.Converters.ToMarkdown
         /// </summary>
         /// <param name="element"></param>
         /// <returns></returns>
-        public string GetLabelAndDecorationTextChild(OpenXmlElement element)
+        public static string GetLabelAndDecorationTextChild(OpenXmlElement element)
         {
             var stringToReturn = "";
 
@@ -445,7 +439,7 @@ namespace My.Converters.ToMarkdown
             if (isHeadingStyle)
             {
                 // Get level and adapt for markdown
-                string lastChar = paragraphStyleId.Val.Value.Substring(paragraphStyleId.Val.Value.Length - 1);
+                string lastChar = paragraphStyleId.Val.Value[^1..];
                 int.TryParse(lastChar, out var titleLvl);
                 titleLvl++;
 

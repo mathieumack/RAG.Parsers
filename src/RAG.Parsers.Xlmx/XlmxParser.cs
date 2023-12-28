@@ -4,18 +4,18 @@ using System.Linq;
 using System.Text;
 using ClosedXML.Excel;
 
-namespace My.Converters.ToMarkdown
+namespace RAG.Parsers.Xlmx
 {
     /// <summary>
     /// Excel Decoder to Markdown
     /// </summary>
-    public class MsExcelDecoder(bool withQuotes = true,
-                          string? worksheetNumberTemplate = null)
+    public class XlmxParser(bool withQuotes = true,
+                                string? worksheetNumberTemplate = null)
     {
         #region Properties
 
         private const string DefaultSheetNumberTemplate = "\n# Worksheet \"{name}\"\n";
-        private const string DefaultCellBalise = "|";
+        private const char DefaultCellBalise = '|';
 
         private readonly bool _withQuotes = withQuotes;
         private readonly string _worksheetNumberTemplate = worksheetNumberTemplate ?? DefaultSheetNumberTemplate;
@@ -29,13 +29,13 @@ namespace My.Converters.ToMarkdown
         /// </summary>
         /// <param name="filePath"></param>
         /// <returns></returns>
-        public string ExcelToText(string filePath)
+        public string ExcelToMarkdown(string filePath)
         {
             // Open file
             using var stream = File.OpenRead(filePath);
 
             // Convert file
-            return ExcelToText(stream);
+            return ExcelToMarkdown(stream);
         }
 
         /// <summary>
@@ -44,7 +44,7 @@ namespace My.Converters.ToMarkdown
         /// <param name="data"></param>
         /// <returns></returns>
         /// <exception cref="InvalidOperationException"></exception>
-        public string ExcelToText(Stream data)
+        public string ExcelToMarkdown(Stream data)
         {
             using var workbook = new XLWorkbook(data);
             var sb = new StringBuilder();
@@ -53,14 +53,12 @@ namespace My.Converters.ToMarkdown
             {
                 sb.AppendLine(_worksheetNumberTemplate.Replace("{name}", $"{worksheet.Name}"));
 
-                //var columnCount = worksheet.RangeUsed().ColumnCount();                
 
                 var columnCount = 0;
                 var firstRow = true;
                 
                 foreach (IXLRangeRow? row in worksheet.RangeUsed().RowsUsed())
                 {
-                    //if (row is null) { continue; }                    
 
                     if (firstRow)
                     {
@@ -116,28 +114,6 @@ namespace My.Converters.ToMarkdown
             }
 
             return sb.ToString().Trim();
-        }
-
-        const int ColumnBase = 26;
-        const int DigitMax = 7; // cell(log26(Int32.Max))
-        const string Digits = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-        public string IndexToColumn(int index)
-        {
-            if (index <= 0)
-                throw new IndexOutOfRangeException("index must be a positive number");
-
-            if (index <= ColumnBase)
-                return Digits[index - 1].ToString();
-
-            var sb = new StringBuilder().Append(' ', DigitMax);
-            var current = index;
-            var offset = DigitMax;
-            while (current > 0)
-            {
-                sb[--offset] = Digits[--current % ColumnBase];
-                current /= ColumnBase;
-            }
-            return sb.ToString(offset, DigitMax - offset);
         }
 
         #endregion
