@@ -7,7 +7,7 @@
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <LangVersion>preview</LangVersion>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
-    <Authors>MACK Mathieu</Authors>
+    <Authors>MACK Mathieu,CECCALDI Adrien</Authors>
     <Copyright>Copyright (c) MACK Mathieu</Copyright>
     <PackageProjectUrl>https://github.com/mathieumack/RAG.Parsers</PackageProjectUrl>
     <RepositoryUrl>https://github.com/mathieumack/RAG.Parsers</RepositoryUrl>

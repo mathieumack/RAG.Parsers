@@ -23,9 +23,7 @@ namespace RAG.Parsers.Docx
         #endregion
 
         #region Public Methods
-
-        #region Explore document
-
+                
         /// <summary>
         /// Read file and open it
         /// </summary>
@@ -40,13 +38,19 @@ namespace RAG.Parsers.Docx
             return DocToMarkdown(stream);
         }
 
+        #endregion
+
+        #region Private Methods
+
+        #region Explore document
+
         /// <summary>
         /// Convert word document stream to text
         /// </summary>
         /// <param name="data"></param>
         /// <returns></returns>
         /// <exception cref="InvalidOperationException"></exception>
-        public string DocToMarkdown(Stream data)
+        private string DocToMarkdown(Stream data)
         {
             // Get file from stream
             var wordprocessingDocument = WordprocessingDocument.Open(data, false);
@@ -99,7 +103,7 @@ namespace RAG.Parsers.Docx
         /// </summary>
         /// <param name="paragraph"></param>
         /// <param name="sb"></param>
-        public void ProcessParagraph(Paragraph paragraph, ref StringBuilder sb)
+        private void ProcessParagraph(Paragraph paragraph, ref StringBuilder sb)
         {
             var stringToAdd = "";
 
@@ -144,7 +148,7 @@ namespace RAG.Parsers.Docx
         /// </summary>
         /// <param name="table"></param>
         /// <param name="sb"></param>
-        public static void ProcessTable(Table table, ref StringBuilder sb)
+        private static void ProcessTable(Table table, ref StringBuilder sb)
         {
             var firstRow = true;
 
@@ -200,7 +204,7 @@ namespace RAG.Parsers.Docx
         /// </summary>
         /// <param name="numberOfColumn"></param>
         /// <returns></returns>
-        public static string BuildTableHeaderSeparator(int numberOfColumn)
+        private static string BuildTableHeaderSeparator(int numberOfColumn)
         {
             var row = "|";
             var headerRowSeparator = "---|";
@@ -219,7 +223,7 @@ namespace RAG.Parsers.Docx
         /// Get all hyperlinks in document
         /// </summary>
         /// <param name="mainDocument"></param>
-        public void GetAllHyperlinks(MainDocumentPart mainDocument)
+        private void GetAllHyperlinks(MainDocumentPart mainDocument)
         {
             hyperlinks = mainDocument.HyperlinkRelationships.Where(x => x.IsExternal).ToList();
         }
@@ -230,7 +234,7 @@ namespace RAG.Parsers.Docx
         /// <param name="element"></param>
         /// <param name="hyperlinks"></param>
         /// <returns></returns>
-        public static string GetHyperlink(Hyperlink element, List<HyperlinkRelationship> hyperlinks)
+        private static string GetHyperlink(Hyperlink element, List<HyperlinkRelationship> hyperlinks)
         {
             var stringToReturn = "";
 
@@ -263,7 +267,7 @@ namespace RAG.Parsers.Docx
         /// Get all styles in document
         /// </summary>
         /// <param name="mainDocument"></param>
-        public void GetAllStyles(MainDocumentPart mainDocument)
+        private void GetAllStyles(MainDocumentPart mainDocument)
         {
             styles = mainDocument.StyleDefinitionsPart.Styles.StylesPart.Styles;
             
@@ -282,7 +286,7 @@ namespace RAG.Parsers.Docx
         /// </summary>
         /// <param name="element"></param>
         /// <returns></returns>
-        public static string GetLabelAndDecoration(OpenXmlElement element)
+        private static string GetLabelAndDecoration(OpenXmlElement element)
         {
             // Dispatcher
             return element.FirstChild switch
@@ -298,7 +302,7 @@ namespace RAG.Parsers.Docx
         /// </summary>
         /// <param name="element"></param>
         /// <returns></returns>
-        public static string GetLabelAndDecorationRunChild(OpenXmlElement element)
+        private static string GetLabelAndDecorationRunChild(OpenXmlElement element)
         {
             var stringToReturn = "";
 
@@ -351,7 +355,7 @@ namespace RAG.Parsers.Docx
         /// </summary>
         /// <param name="element"></param>
         /// <returns></returns>
-        public static string GetLabelAndDecorationTextChild(OpenXmlElement element)
+        private static string GetLabelAndDecorationTextChild(OpenXmlElement element)
         {
             var stringToReturn = "";
 
@@ -378,7 +382,7 @@ namespace RAG.Parsers.Docx
         /// </summary>
         /// <param name="paragraph"></param>
         /// <returns></returns>
-        public bool DetectTOC(Paragraph paragraph)
+        private bool DetectTOC(Paragraph paragraph)
         {
             try
             {
@@ -405,7 +409,7 @@ namespace RAG.Parsers.Docx
         /// </summary>
         /// <param name="paragraph"></param>
         /// <returns></returns>
-        public bool DetectIfTitle(Paragraph paragraph)
+        private bool DetectIfTitle(Paragraph paragraph)
         {
             try
             {
@@ -428,7 +432,7 @@ namespace RAG.Parsers.Docx
         /// </summary>
         /// <param name="paragraph"></param>
         /// <returns></returns>
-        public string GetTitle(Paragraph paragraph)
+        private string GetTitle(Paragraph paragraph)
         {
             var stringToReturn = "";
             var paragraphProperties = (ParagraphProperties)paragraph.FirstChild;
