@@ -42,7 +42,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\RAG.Parsers.Xlmx\RAG.Parsers.Xlsx.csproj" />
+    <ProjectReference Include="..\RAG.Parsers.Xlsx\RAG.Parsers.Xlsx.csproj" />
   </ItemGroup>
 
 </Project>

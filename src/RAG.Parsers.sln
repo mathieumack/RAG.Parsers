@@ -11,9 +11,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{469521A2
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RAG.Parsers.Docx.UnitTests", "RAG.Parsers.Docx.UnitTests\RAG.Parsers.Docx.UnitTests.csproj", "{C61BBAE5-33EF-487B-9F4A-589FBED124CE}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RAG.Parsers.Xlsx", "RAG.Parsers.Xlmx\RAG.Parsers.Xlsx.csproj", "{943DCCF2-EB1F-428E-8C36-8A069DA1D903}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RAG.Parsers.Xlsx", "RAG.Parsers.Xlsx\RAG.Parsers.Xlsx.csproj", "{943DCCF2-EB1F-428E-8C36-8A069DA1D903}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RAG.Parsers.Xlsx.UnitTests", "RAG.Parsers.Xlmx.UnitTests\RAG.Parsers.Xlsx.UnitTests.csproj", "{7269AFD3-7679-4BCB-9287-BBD396E0B162}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RAG.Parsers.Xlsx.UnitTests", "RAG.Parsers.Xlsx.UnitTests\RAG.Parsers.Xlsx.UnitTests.csproj", "{7269AFD3-7679-4BCB-9287-BBD396E0B162}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
