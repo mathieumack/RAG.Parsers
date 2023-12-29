@@ -15,7 +15,7 @@
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <Description>Helper library that let you generate Word document based on markdown files.</Description>
-    <PackageTags>devops;docx;markdown</PackageTags>
+    <PackageTags>devops;docx;markdown;rag</PackageTags>
   </PropertyGroup>
 
 	<ItemGroup>
