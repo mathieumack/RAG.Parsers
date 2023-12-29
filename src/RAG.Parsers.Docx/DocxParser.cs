@@ -78,8 +78,7 @@ namespace RAG.Parsers.Docx
                         if (node is Paragraph paragraph)                          
                             // Process Text and paragraph
                             ProcessParagraph(paragraph, ref sb);                        
-
-                        if (node is Table table)                        
+                        else if (node is Table table)                        
                             // Process Table
                             ProcessTable(table, ref sb);                        
                     }                
