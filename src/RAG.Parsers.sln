@@ -1,0 +1,53 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.32112.339
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Libraries", "Libraries", "{DF35D5BB-6544-4719-BA72-5AB3986A9C3F}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RAG.Parsers.Docx", "RAG.Parsers.Docx\RAG.Parsers.Docx.csproj", "{F460939B-1C5A-46B0-B973-7DDBEA7EAAFA}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{469521A2-D12C-467D-B324-C5EF1F6FF85D}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RAG.Parsers.Docx.UnitTests", "RAG.Parsers.Docx.UnitTests\RAG.Parsers.Docx.UnitTests.csproj", "{C61BBAE5-33EF-487B-9F4A-589FBED124CE}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RAG.Parsers.Xlsx", "RAG.Parsers.Xlsx\RAG.Parsers.Xlsx.csproj", "{943DCCF2-EB1F-428E-8C36-8A069DA1D903}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RAG.Parsers.Xlsx.UnitTests", "RAG.Parsers.Xlsx.UnitTests\RAG.Parsers.Xlsx.UnitTests.csproj", "{7269AFD3-7679-4BCB-9287-BBD396E0B162}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F460939B-1C5A-46B0-B973-7DDBEA7EAAFA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F460939B-1C5A-46B0-B973-7DDBEA7EAAFA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F460939B-1C5A-46B0-B973-7DDBEA7EAAFA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F460939B-1C5A-46B0-B973-7DDBEA7EAAFA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C61BBAE5-33EF-487B-9F4A-589FBED124CE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C61BBAE5-33EF-487B-9F4A-589FBED124CE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C61BBAE5-33EF-487B-9F4A-589FBED124CE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C61BBAE5-33EF-487B-9F4A-589FBED124CE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{943DCCF2-EB1F-428E-8C36-8A069DA1D903}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{943DCCF2-EB1F-428E-8C36-8A069DA1D903}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{943DCCF2-EB1F-428E-8C36-8A069DA1D903}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{943DCCF2-EB1F-428E-8C36-8A069DA1D903}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7269AFD3-7679-4BCB-9287-BBD396E0B162}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7269AFD3-7679-4BCB-9287-BBD396E0B162}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7269AFD3-7679-4BCB-9287-BBD396E0B162}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7269AFD3-7679-4BCB-9287-BBD396E0B162}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{F460939B-1C5A-46B0-B973-7DDBEA7EAAFA} = {DF35D5BB-6544-4719-BA72-5AB3986A9C3F}
+		{C61BBAE5-33EF-487B-9F4A-589FBED124CE} = {469521A2-D12C-467D-B324-C5EF1F6FF85D}
+		{943DCCF2-EB1F-428E-8C36-8A069DA1D903} = {DF35D5BB-6544-4719-BA72-5AB3986A9C3F}
+		{7269AFD3-7679-4BCB-9287-BBD396E0B162} = {469521A2-D12C-467D-B324-C5EF1F6FF85D}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {F924D346-1498-4E75-9A21-1CAC84F44B13}
+	EndGlobalSection
+EndGlobal

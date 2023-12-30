@@ -1,0 +1,26 @@
+name: .NET
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+        publishToNuget:
+          description: 'Publish to nuget'
+          required: true
+          default: true
+          type: boolean
+
+jobs:
+  dotnet:
+    uses: mathieumack/MyGithubActions/.github/workflows/dotnetlib.yml@main
+    with:
+      publishToNuget: false
+    secrets:
+      NUGETPACKAGEIDENTIFIER: ${{ secrets.NUGETPACKAGEIDENTIFIER }}
+      NUGETAPIKEY: ${{ secrets.NUGETAPIKEY }}
+      SONAR_ORGANIZATION_CODE: ${{ secrets.SONAR_ORGANIZATION_CODE }}
+      SONAR_PROJECT_CODE: ${{ secrets.SONAR_PROJECT_CODE }}
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

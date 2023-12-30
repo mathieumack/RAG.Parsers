@@ -1,0 +1,20 @@
+namespace RAG.Parsers.Xlsx.UnitTests
+{
+    [TestClass]
+    public class XlsxParser_Should
+    {
+        [TestMethod]
+        public void ConvertExcelToMarkdown_WhenOK()
+        {
+            // Arrange
+            var xlsxParser = new XlsxParser();
+            var filePath = Path.Combine(Environment.CurrentDirectory, "TestFiles/TestSample.xlsx");
+
+            // Act
+            var result = xlsxParser.ExcelToMarkdown(filePath);
+
+            // Assert
+            Assert.IsNotNull(result);   
+        }
+    }
+}
