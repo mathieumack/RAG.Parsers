@@ -41,7 +41,7 @@ public class XlsxParser()
     /// <param name="worksheetNumberTemplate"></param>
     /// <returns></returns>
     /// <exception cref="InvalidOperationException"></exception>
-    private string ToMarkdown(Stream data, bool withQuotes = true, string? worksheetNumberTemplate = null)
+    public string ToMarkdown(Stream data, bool withQuotes = true, string? worksheetNumberTemplate = null)
     {
         using var workbook = new XLWorkbook(data);
         var sb = new StringBuilder();

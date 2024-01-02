@@ -42,7 +42,7 @@ public class DocxParser
     /// <param name="data"></param>
     /// <returns></returns>
     /// <exception cref="InvalidOperationException"></exception>
-    private string ToMarkdown(Stream data)
+    public string ToMarkdown(Stream data)
     {
         // Get file from stream
         var wordprocessingDocument = WordprocessingDocument.Open(data, false);
