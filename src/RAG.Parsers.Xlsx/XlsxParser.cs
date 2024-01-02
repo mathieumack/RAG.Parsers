@@ -4,122 +4,120 @@ using System.Linq;
 using System.Text;
 using ClosedXML.Excel;
 
-namespace RAG.Parsers.Xlsx
+namespace RAG.Parsers.Xlsx;
+
+/// <summary>
+/// Excel Decoder to Markdown
+/// </summary>
+public class XlsxParser()
 {
+    #region Public Methods
+
     /// <summary>
-    /// Excel Decoder to Markdown
+    /// Read file and open it
     /// </summary>
-    public class XlsxParser(bool withQuotes = true,
-                                string? worksheetNumberTemplate = null)
+    /// <param name="filePath"></param>
+    /// <param name="withQuotes"></param>
+    /// <param name="worksheetNumberTemplate"></param>
+    /// <returns></returns>
+    public string ToMarkdown(string filePath, bool withQuotes = true, string? worksheetNumberTemplate = null)
     {
-        #region Properties
+        // Open file
+        using var stream = File.OpenRead(filePath);
 
-        private const string DefaultSheetNumberTemplate = "\n# Worksheet \"{name}\"\n";
-        private const char DefaultCellBalise = '|';
+        // Convert file
+        return ToMarkdown(stream);
+    }
 
-        private readonly bool _withQuotes = withQuotes;
-        private readonly string _worksheetNumberTemplate = worksheetNumberTemplate ?? DefaultSheetNumberTemplate;
+    #endregion
 
-        #endregion
+    #region Private Methods
 
-        #region Public Methods
+    /// <summary>
+    /// Convert excel document stream to text
+    /// </summary>
+    /// <param name="data"></param>
+    /// <param name="withQuotes"></param>
+    /// <param name="worksheetNumberTemplate"></param>
+    /// <returns></returns>
+    /// <exception cref="InvalidOperationException"></exception>
+    private string ToMarkdown(Stream data, bool withQuotes = true, string? worksheetNumberTemplate = null)
+    {
+        using var workbook = new XLWorkbook(data);
+        var sb = new StringBuilder();
 
-        /// <summary>
-        /// Read file and open it
-        /// </summary>
-        /// <param name="filePath"></param>
-        /// <returns></returns>
-        public string ExcelToMarkdown(string filePath)
+        var context = new DocumentContext()
         {
-            // Open file
-            using var stream = File.OpenRead(filePath);
+            WithQuotes = withQuotes,
+            WorksheetNumberTemplate = worksheetNumberTemplate ?? DocumentContext.DefaultSheetNumberTemplate
+        };
 
-            // Convert file
-            return ExcelToMarkdown(stream);
-        }
-
-        #endregion
-
-        #region Private Methods
-
-        /// <summary>
-        /// Convert excel document stream to text
-        /// </summary>
-        /// <param name="data"></param>
-        /// <returns></returns>
-        /// <exception cref="InvalidOperationException"></exception>
-        private string ExcelToMarkdown(Stream data)
+        foreach (var worksheet in workbook.Worksheets)
         {
-            using var workbook = new XLWorkbook(data);
-            var sb = new StringBuilder();
+            sb.AppendLine(context.WorksheetNumberTemplate.Replace("{name}", $"{worksheet.Name}"));
 
-            foreach (var worksheet in workbook.Worksheets)
+
+            var columnCount = 0;
+            var firstRow = true;
+            
+            foreach (IXLRangeRow? row in worksheet.RangeUsed().RowsUsed())
             {
-                sb.AppendLine(_worksheetNumberTemplate.Replace("{name}", $"{worksheet.Name}"));
 
-
-                var columnCount = 0;
-                var firstRow = true;
-                
-                foreach (IXLRangeRow? row in worksheet.RangeUsed().RowsUsed())
+                if (firstRow)
                 {
-
-                    if (firstRow)
-                    {
-                        var rowString = "|";
-                        foreach (var cell in row.Cells())
-                        {
-                            rowString += "|";
-                            rowString += cell.Address.ColumnLetter;
-                            columnCount++;
-                        }
-
-                        rowString += "|";
-                        sb.AppendLine(rowString);
-
-                        rowString = "|";
-                        var headerRowSeparator = "---|";
-                        rowString += new StringBuilder(headerRowSeparator.Length * (columnCount + 1))
-                                        .Insert(0, headerRowSeparator, (columnCount + 1))
-                                        .ToString();
-
-                        sb.AppendLine(rowString);
-                        firstRow = false;
-                    }
-
-                    var cells = row.CellsUsed().ToList();
-
-                    sb.Append(DefaultCellBalise);
-
-                    var firstColumn = true;
+                    var rowString = "|";
                     foreach (var cell in row.Cells())
                     {
-                        if (firstColumn)
-                        {
-                            sb.Append("**");
-                            sb.Append(cell.Address.RowNumber);
-                            sb.Append("**|");
-                            firstColumn = false;
-                        }
-
-                        if (_withQuotes && cell is { Value.IsText: true })
-                            // TODO : Manage strange char
-                            sb.Append(cell.Value.GetText().Replace("\"", "\"\""));
-                        else
-                            sb.Append(cell.Value);
-                        
-                        sb.Append(DefaultCellBalise);
+                        rowString += "|";
+                        rowString += cell.Address.ColumnLetter;
+                        columnCount++;
                     }
-                    
-                    sb.Append(DefaultCellBalise);
 
-                    sb.AppendLine();
+                    rowString += "|";
+                    sb.AppendLine(rowString);
+
+                    rowString = "|";
+                    var headerRowSeparator = "---|";
+                    rowString += new StringBuilder(headerRowSeparator.Length * (columnCount + 1))
+                                    .Insert(0, headerRowSeparator, (columnCount + 1))
+                                    .ToString();
+
+                    sb.AppendLine(rowString);
+                    firstRow = false;
                 }
-            }
 
-            return sb.ToString().Trim();
+                var cells = row.CellsUsed().ToList();
+
+                sb.Append(DocumentContext.DefaultCellBalise);
+
+                var firstColumn = true;
+                foreach (var cell in row.Cells())
+                {
+                    if (firstColumn)
+                    {
+                        sb.Append("**");
+                        sb.Append(cell.Address.RowNumber);
+                        sb.Append("**|");
+                        firstColumn = false;
+                    }
+
+                    if (context.WithQuotes && cell is { Value.IsText: true })
+                        // TODO : Manage strange char
+                        sb.Append(cell.Value.GetText().Replace("\"", "\"\""));
+                    else
+                        sb.Append(cell.Value);
+                    
+                    sb.Append(DocumentContext.DefaultCellBalise);
+                }
+                
+                sb.Append(DocumentContext.DefaultCellBalise);
+
+                sb.AppendLine();
+            }
         }
 
-        #endregion
+        return sb.ToString().Trim();
     }
+
+    #endregion
 }

@@ -1,14 +1,14 @@
-namespace RAG.Parsers.Docx.UnitTests;
+namespace RAG.Parsers.Pdf.UnitTests;
 
 [TestClass]
-public class DocxParser_Should
+public class PdfParser_Should
 {
     [TestMethod]
     public void ConvertWordToMarkdown_WhenOK()
     {
         // Arrange
-        var parser = new DocxParser();
-        var filePath = Path.Combine(Environment.CurrentDirectory, "TestFiles/TestSample.docx");
+        var parser = new PdfParser();
+        var filePath = Path.Combine(Environment.CurrentDirectory, "TestFiles/TestSample.pdf");
 
         // Act
         var result = parser.ToMarkdown(filePath);

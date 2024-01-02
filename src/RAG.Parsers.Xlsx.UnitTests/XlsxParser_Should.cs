@@ -1,20 +1,21 @@
-namespace RAG.Parsers.Xlsx.UnitTests
+using Irony.Parsing;
+
+namespace RAG.Parsers.Xlsx.UnitTests;
+
+[TestClass]
+public class XlsxParser_Should
 {
-    [TestClass]
-    public class XlsxParser_Should
+    [TestMethod]
+    public void ConvertExcelToMarkdown_WhenOK()
     {
-        [TestMethod]
-        public void ConvertExcelToMarkdown_WhenOK()
-        {
-            // Arrange
-            var xlsxParser = new XlsxParser();
-            var filePath = Path.Combine(Environment.CurrentDirectory, "TestFiles/TestSample.xlsx");
+        // Arrange
+        var parser = new XlsxParser();
+        var filePath = Path.Combine(Environment.CurrentDirectory, "TestFiles/TestSample.xlsx");
 
-            // Act
-            var result = xlsxParser.ExcelToMarkdown(filePath);
+        // Act
+        var result = parser.ToMarkdown(filePath);
 
-            // Assert
-            Assert.IsNotNull(result);   
-        }
+        // Assert
+        Assert.IsNotNull(result);   
     }
 }
