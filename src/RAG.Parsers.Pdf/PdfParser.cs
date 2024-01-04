@@ -8,6 +8,7 @@ using static System.Runtime.InteropServices.JavaScript.JSType;
 using System.Collections.Generic;
 using UglyToad.PdfPig.Content;
 using UglyToad.PdfPig.DocumentLayoutAnalysis.TextExtractor;
+using System.IO;
 
 namespace RAG.Parsers.Pdf;
 
@@ -25,6 +26,20 @@ public class PdfParser
     /// <returns></returns>
     public string ToMarkdown(string filePath)
     {
+        // Open file
+        using var stream = File.OpenRead(filePath);
+
+        // Convert file
+        return ToMarkdown(stream);
+    }
+
+    /// <summary>
+    /// Read file and open it
+    /// </summary>
+    /// <param name="data"></param>
+    /// <returns></returns>
+    public string ToMarkdown(Stream data)
+    {
         StringBuilder output = new StringBuilder();
 
         // Preview for next evolutions :
@@ -32,7 +47,7 @@ public class PdfParser
         //    NearestNeighbourWordExtractor.Instance,
         //    DocstrumBoundingBoxes.Instance);
 
-        using (var document = PdfDocument.Open(filePath))
+        using (var document = PdfDocument.Open(data))
         {
             for (var i = 0; i < document.NumberOfPages; i++)
             {
