@@ -4,6 +4,10 @@ using UglyToad.PdfPig.DocumentLayoutAnalysis.PageSegmenter;
 using UglyToad.PdfPig;
 using UglyToad.PdfPig.DocumentLayoutAnalysis.WordExtractor;
 using System;
+using static System.Runtime.InteropServices.JavaScript.JSType;
+using System.Collections.Generic;
+using UglyToad.PdfPig.Content;
+using UglyToad.PdfPig.DocumentLayoutAnalysis.TextExtractor;
 
 namespace RAG.Parsers.Pdf;
 
@@ -21,13 +25,12 @@ public class PdfParser
     /// <returns></returns>
     public string ToMarkdown(string filePath)
     {
-        throw new NotImplementedException("This feature is not available yet");
-
         StringBuilder output = new StringBuilder();
 
-        AltoXmlTextExporter altoXmlTextExporter = new AltoXmlTextExporter(
-            NearestNeighbourWordExtractor.Instance,
-            DocstrumBoundingBoxes.Instance);
+        // Preview for next evolutions :
+        //AltoXmlTextExporter altoXmlTextExporter = new AltoXmlTextExporter(
+        //    NearestNeighbourWordExtractor.Instance,
+        //    DocstrumBoundingBoxes.Instance);
 
         using (var document = PdfDocument.Open(filePath))
         {
@@ -35,11 +38,8 @@ public class PdfParser
             {
                 var page = document.GetPage(i + 1);
 
-                // Convert page to text, adding a reference to hocrjs script
-                string xml = altoXmlTextExporter.Get(page);
-                
-                // Save text to an html file
-                output.AppendLine(xml);
+                string? text = ContentOrderTextExtractor.GetText(page);
+                output.AppendLine(text);
             }
         }
 
