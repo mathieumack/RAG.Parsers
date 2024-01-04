@@ -57,11 +57,14 @@ public class XlsxParser()
         {
             sb.AppendLine(context.WorksheetNumberTemplate.Replace("{name}", $"{worksheet.Name}"));
 
-
             var columnCount = 0;
             var firstRow = true;
-            
-            foreach (IXLRangeRow? row in worksheet.RangeUsed().RowsUsed())
+
+            var rangeUsed = worksheet.RangeUsed();
+            if (rangeUsed is null) // Worksheet is empty
+                continue;
+
+            foreach (IXLRangeRow? row in rangeUsed.RowsUsed())
             {
 
                 if (firstRow)
