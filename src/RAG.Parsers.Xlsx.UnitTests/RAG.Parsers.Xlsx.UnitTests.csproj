@@ -13,7 +13,6 @@
     <None Remove="MdFiles\0.md" />
     <None Remove="MdFiles\1.md" />
     <None Remove="MdFiles\images\sampleimagefromdalle.png" />
-    <None Remove="TestFiles\Fiches_Gestiondeprojet.xlsx" />
     <None Remove="TestFiles\TestSample.xlsx" />
   </ItemGroup>
 

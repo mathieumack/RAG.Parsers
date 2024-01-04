@@ -109,14 +109,14 @@ public class XlsxParser()
                         sb.Append(cell.Value.GetNumber().ToString(CultureInfo.InvariantCulture));
                     else if(cell is { Value.IsDateTime: true })
                         sb.Append(cell.Value.GetDateTime().ToString(CultureInfo.InvariantCulture));
+                    else if (cell is { Value.IsBlank: true })
+                        sb.Append(cell.Value.GetBlank().ToString());
                     else
-                        sb.Append(cell.Value.GetText().Replace("\"", "\"\""));
+                        sb.Append(cell.Value);
                     
                     sb.Append(DocumentContext.DefaultCellBalise);
                 }
                 
-                sb.Append(DocumentContext.DefaultCellBalise);
-
                 sb.AppendLine();
             }
         }
