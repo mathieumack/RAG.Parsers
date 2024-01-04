@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -101,11 +102,12 @@ public class XlsxParser()
                         firstColumn = false;
                     }
 
-                    if (context.WithQuotes && cell is { Value.IsText: true })
-                        // TODO : Manage strange char
-                        sb.Append(cell.Value.GetText().Replace("\"", "\"\""));
+                    if(cell is { Value.IsNumber: true })
+                        sb.Append(cell.Value.GetNumber().ToString(CultureInfo.InvariantCulture));
+                    else if(cell is { Value.IsDateTime: true })
+                        sb.Append(cell.Value.GetDateTime().ToString(CultureInfo.InvariantCulture));
                     else
-                        sb.Append(cell.Value);
+                        sb.Append(cell.Value.GetText().Replace("\"", "\"\""));
                     
                     sb.Append(DocumentContext.DefaultCellBalise);
                 }
