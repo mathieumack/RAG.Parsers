@@ -272,7 +272,15 @@ namespace RAG.Parsers.Docx
             
             foreach (Style style in styles.ChildElements.Where(x => x.GetType() == typeof(Style)).Cast<Style>())
             {
-                dictionaryStyles.Add((style.StyleId, style.StyleName.Val.Value.Contains("heading"), style.StyleName.Val.Value.Contains("toc")));
+                var hasStyleName = style.StyleName != null;
+                bool isHeading = false;
+                bool isTOCStyle = false;
+                if (hasStyleName)
+                {
+                    isHeading = style.StyleName.Val.Value.Contains("heading");
+                    isTOCStyle = style.StyleName.Val.Value.Contains("toc");
+                }
+                dictionaryStyles.Add((style.StyleId, isHeading, isTOCStyle));
             }
         }
 
