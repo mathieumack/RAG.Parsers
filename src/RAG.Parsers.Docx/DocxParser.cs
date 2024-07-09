@@ -50,7 +50,7 @@ namespace RAG.Parsers.Docx
         /// <param name="data"></param>
         /// <returns></returns>
         /// <exception cref="InvalidOperationException"></exception>
-        private string DocToMarkdown(Stream data)
+        public string DocToMarkdown(Stream data)
         {
             // Get file from stream
             var wordprocessingDocument = WordprocessingDocument.Open(data, false);

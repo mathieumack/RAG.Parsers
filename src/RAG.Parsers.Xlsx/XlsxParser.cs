@@ -38,17 +38,13 @@ namespace RAG.Parsers.Xlsx
             return ExcelToMarkdown(stream);
         }
 
-        #endregion
-
-        #region Private Methods
-
         /// <summary>
         /// Convert excel document stream to text
         /// </summary>
         /// <param name="data"></param>
         /// <returns></returns>
         /// <exception cref="InvalidOperationException"></exception>
-        private string ExcelToMarkdown(Stream data)
+        public string ExcelToMarkdown(Stream data)
         {
             using var workbook = new XLWorkbook(data);
             var sb = new StringBuilder();
