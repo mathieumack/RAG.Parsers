@@ -13,7 +13,6 @@
     <None Remove="MdFiles\0.md" />
     <None Remove="MdFiles\1.md" />
     <None Remove="MdFiles\images\sampleimagefromdalle.png" />
-    <None Remove="TestFiles\TestSample.xlsx" />
   </ItemGroup>
 
   <ItemGroup>
@@ -36,13 +35,13 @@
     <Content Include="MdFiles\images\sampleimagefromdalle.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestFiles\*.*">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
+	<Content Include="TestFiles\TestSample.pdf">
+		<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	</Content>
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\RAG.Parsers.Xlsx\RAG.Parsers.Xlsx.csproj" />
+    <ProjectReference Include="..\RAG.Parsers.Pdf\RAG.Parsers.Pdf.csproj" />
   </ItemGroup>
 
 </Project>

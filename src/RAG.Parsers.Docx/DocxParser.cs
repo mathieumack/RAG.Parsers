@@ -7,42 +7,34 @@ using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 
-namespace RAG.Parsers.Docx
+namespace RAG.Parsers.Docx;
+
+/// <summary>
+/// Docx Decoder to Markdown
+/// </summary>
+public class DocxParser
 {
+    #region Public Methods
+            
     /// <summary>
-    /// Docx Decoder to Markdown
+    /// Read file and open it
     /// </summary>
-    public class DocxParser
+    /// <param name="filePath"></param>
+    /// <returns></returns>
+    public string ToMarkdown(string filePath)
     {
-        #region Properties
+        // Open file
+        using var stream = File.OpenRead(filePath);
 
-        private List<HyperlinkRelationship> hyperlinks;
-        private Styles styles;
-        private readonly List<(string styleName, bool isHeadingStyle, bool isTOCStyle)> dictionaryStyles = [];
+        // Convert file
+        return ToMarkdown(stream);
+    }
 
-        #endregion
+    #endregion
 
-        #region Public Methods
-                
-        /// <summary>
-        /// Read file and open it
-        /// </summary>
-        /// <param name="filePath"></param>
-        /// <returns></returns>
-        public string DocToMarkdown(string filePath)
-        {
-            // Open file
-            using var stream = File.OpenRead(filePath);
+    #region Private Methods
 
-            // Convert file
-            return DocToMarkdown(stream);
-        }
-
-        #endregion
-
-        #region Private Methods
-
-        #region Explore document
+    #region Explore document
 
         /// <summary>
         /// Convert word document stream to text
@@ -59,208 +51,212 @@ namespace RAG.Parsers.Docx
                 // Stringbuilder for the output
                 StringBuilder sb = new();
 
-                MainDocumentPart? mainPart = wordprocessingDocument.MainDocumentPart ??
-                    throw new InvalidOperationException("The main document part is missing.");
+            MainDocumentPart? mainPart = wordprocessingDocument.MainDocumentPart ??
+                throw new InvalidOperationException("The main document part is missing.");
 
-                Body? body = mainPart.Document.Body ??
-                    throw new InvalidOperationException("The document body is missing.");
-                
-                // Get Hyperlinks and Styles
-                GetAllHyperlinks(mainPart);
-                GetAllStyles(mainPart);
+            Body? body = mainPart.Document.Body ??
+                throw new InvalidOperationException("The document body is missing.");
 
-                // Explore file
-                var parts = mainPart.Document.Descendants().FirstOrDefault();
-                if (parts != null)                
-                    // Explore all elements in file
-                    foreach (var node in parts.ChildElements.Where(x => !string.IsNullOrEmpty(x.InnerText)))
-                    {
-                        if (node is Paragraph paragraph)                          
-                            // Process Text and paragraph
-                            ProcessParagraph(paragraph, ref sb);                        
-                        else if (node is Table table)                        
-                            // Process Table
-                            ProcessTable(table, ref sb);                        
-                    }                
-
-                // Return text generated
-                return sb.ToString().Trim();
-            }
-            finally
+            // Get Hyperlinks and Styles
+            var context = new DocumentContext()
             {
-                // Release file
-                wordprocessingDocument.Dispose();
-            }
+                Hyperlinks = GetAllHyperlinks(mainPart),
+                DictionaryStyles = GetAllStyles(mainPart)
+            };
+            
+            // Explore file
+            var parts = mainPart.Document.Descendants().FirstOrDefault();
+            if (parts != null)                
+                // Explore all elements in file
+                foreach (var node in parts.ChildElements.Where(x => !string.IsNullOrEmpty(x.InnerText)))
+                {
+                    if (node is Paragraph paragraph)
+                        // Process Text and paragraph
+                        ProcessParagraph(paragraph, context, ref sb);                        
+                    else if (node is Table table)                        
+                        // Process Table
+                        ProcessTable(table, ref sb);                        
+                }                
+
+            // Return text generated
+            return sb.ToString().Trim();
         }
-
-        #endregion
-
-        #region Paragraph
-
-        /// <summary>
-        /// Process paragraph
-        /// </summary>
-        /// <param name="paragraph"></param>
-        /// <param name="sb"></param>
-        private void ProcessParagraph(Paragraph paragraph, ref StringBuilder sb)
+        finally
         {
-            var stringToAdd = "";
+            // Release file
+            wordprocessingDocument.Dispose();
+        }
+    }
 
-            // Detect and manage TOC
-            if (DetectTOC(paragraph))
-                return;
+    #endregion
 
-            // Detect and manage title
-            if (DetectIfTitle(paragraph))
-            {
-                stringToAdd += GetTitle(paragraph);
-                sb.AppendLine(stringToAdd);
-                return;
-            }
+    #region Paragraph
 
-            // Explore all sub elements
-            foreach (var child in paragraph.ChildElements)
-            {
-                // Empty elements, bypass
-                if (string.IsNullOrEmpty(child.InnerText))
-                    continue;
+    /// <summary>
+    /// Process paragraph
+    /// </summary>
+    /// <param name="paragraph"></param>
+    /// <param name="context"></param>
+    /// <param name="sb"></param>
+    private void ProcessParagraph(Paragraph paragraph, DocumentContext context, ref StringBuilder sb)
+    {
+        var stringToAdd = "";
 
-                // Hyperlink => get link - otherwise => get text and styling
-                if (child.GetType() == typeof(Hyperlink))
-                    stringToAdd += GetHyperlink((Hyperlink)child, hyperlinks);
-                else
-                    stringToAdd += GetLabelAndDecoration(child);
-            }
+        // Detect and manage TOC
+        if (IsParagraphLinkedToTableOfContent(paragraph, context))
+            return;
 
-            if (string.IsNullOrEmpty(stringToAdd))
-                return;
-
+        // Detect and manage title
+        if (IsPaagraphLinkedToTitle(paragraph, context))
+        {
+            stringToAdd += GetTitle(paragraph, context);
             sb.AppendLine(stringToAdd);
+            return;
         }
 
-        #endregion
-
-        #region Tables
-
-        /// <summary>
-        /// Process Table
-        /// </summary>
-        /// <param name="table"></param>
-        /// <param name="sb"></param>
-        private static void ProcessTable(Table table, ref StringBuilder sb)
+        // Explore all sub elements
+        foreach (var child in paragraph.ChildElements)
         {
-            var firstRow = true;
+            // Empty elements, bypass
+            if (string.IsNullOrEmpty(child.InnerText))
+                continue;
 
-            // Explore table row in sub elements
-            foreach (var row in table.ChildElements.Where(x => x.GetType() == typeof(TableRow)))
+            // Hyperlink => get link - otherwise => get text and styling
+            if (child.GetType() == typeof(Hyperlink))
+                stringToAdd += GetHyperlink((Hyperlink)child, context.Hyperlinks);
+            else
+                stringToAdd += GetLabelAndDecoration(child);
+        }
+
+        if (string.IsNullOrEmpty(stringToAdd))
+            return;
+
+        sb.AppendLine(stringToAdd);
+    }
+
+    #endregion
+
+    #region Tables
+
+    /// <summary>
+    /// Process Table
+    /// </summary>
+    /// <param name="table"></param>
+    /// <param name="sb"></param>
+    private static void ProcessTable(Table table, ref StringBuilder sb)
+    {
+        var firstRow = true;
+
+        // Explore table row in sub elements
+        foreach (var row in table.ChildElements.Where(x => x.GetType() == typeof(TableRow)))
+        {
+            var rowToBuild = "";
+
+            // Get number of column
+            var numberOfColumn = row.Where(x => x.GetType() == typeof(TableCell)).Count();
+
+            // Detect if header 
+            // If not, add a 'blank' header row
+            var childType = row.ChildElements.FirstOrDefault().GetType();
+            if (firstRow && childType == typeof(TableCell))
             {
-                var rowToBuild = "";
+                var headerRow = "|";
+                var headerRowSeparator = "-|";
+                headerRow += new StringBuilder(headerRowSeparator.Length * numberOfColumn)
+                                .Insert(0, headerRowSeparator, numberOfColumn)
+                                .ToString();
 
-                // Get number of column
-                var numberOfColumn = row.Where(x => x.GetType() == typeof(TableCell)).Count();
+                sb.AppendLine(headerRow);
+                sb.AppendLine(BuildTableHeaderSeparator(numberOfColumn));
 
-                // Detect if header 
-                // If not, add a 'blank' header row
-                var childType = row.ChildElements.FirstOrDefault().GetType();
-                if (firstRow && childType == typeof(TableCell))
-                {
-                    var headerRow = "|";
-                    var headerRowSeparator = "-|";
-                    headerRow += new StringBuilder(headerRowSeparator.Length * numberOfColumn)
-                                    .Insert(0, headerRowSeparator, numberOfColumn)
-                                    .ToString();
+                firstRow = false;
+            }
 
-                    sb.AppendLine(headerRow);
-                    sb.AppendLine(BuildTableHeaderSeparator(numberOfColumn));
-
-                    firstRow = false;
-                }
-
-                // Explore cells in row
-                foreach (var cell in row.Where(x => x.GetType() == typeof(TableCell)))
-                {
-                    rowToBuild += "|";
-                    rowToBuild += cell.InnerText;
-                }
+            // Explore cells in row
+            foreach (var cell in row.Where(x => x.GetType() == typeof(TableCell)))
+            {
                 rowToBuild += "|";
-
-                sb.AppendLine(rowToBuild);                               
-
-                // Deal with separator needed for markdown
-                if (firstRow)
-                {
-                    sb.AppendLine(BuildTableHeaderSeparator(numberOfColumn));
-
-                    firstRow = false;
-                }
+                rowToBuild += cell.InnerText;
             }
+            rowToBuild += "|";
 
-            sb.AppendLine();
-        }
+            sb.AppendLine(rowToBuild);                               
 
-        /// <summary>
-        /// Build TableHeader Separator
-        /// </summary>
-        /// <param name="numberOfColumn"></param>
-        /// <returns></returns>
-        private static string BuildTableHeaderSeparator(int numberOfColumn)
-        {
-            var row = "|";
-            var headerRowSeparator = "---|";
-            row += new StringBuilder(headerRowSeparator.Length * numberOfColumn)
-                            .Insert(0, headerRowSeparator, numberOfColumn)
-                            .ToString();
-
-            return row;
-        }
-
-        #endregion
-
-        #region Hyperlinks and Styles
-
-        /// <summary>
-        /// Get all hyperlinks in document
-        /// </summary>
-        /// <param name="mainDocument"></param>
-        private void GetAllHyperlinks(MainDocumentPart mainDocument)
-        {
-            hyperlinks = mainDocument.HyperlinkRelationships.Where(x => x.IsExternal).ToList();
-        }
-
-        /// <summary>
-        /// Get Hyperlinkg
-        /// </summary>
-        /// <param name="element"></param>
-        /// <param name="hyperlinks"></param>
-        /// <returns></returns>
-        private static string GetHyperlink(Hyperlink element, List<HyperlinkRelationship> hyperlinks)
-        {
-            var stringToReturn = "";
-
-            // Generate text for hyperlink with decoration
-            try
+            // Deal with separator needed for markdown
+            if (firstRow)
             {
-                stringToReturn += "[";
-                stringToReturn += element.InnerText;
-                stringToReturn += "]";
+                sb.AppendLine(BuildTableHeaderSeparator(numberOfColumn));
 
-                var hyperlink = hyperlinks?.FirstOrDefault(x => x.Id == element.Id);
-
-                // Only link with external (URL) hyperlink
-                if (hyperlink is not null && hyperlink.IsExternal)
-                {
-                    stringToReturn += "(";
-                    stringToReturn += hyperlink.Uri.AbsoluteUri;
-                    stringToReturn += ")";
-                }
+                firstRow = false;
             }
-            catch (Exception)
+        }
+
+        sb.AppendLine();
+    }
+
+    /// <summary>
+    /// Build TableHeader Separator
+    /// </summary>
+    /// <param name="numberOfColumn"></param>
+    /// <returns></returns>
+    private static string BuildTableHeaderSeparator(int numberOfColumn)
+    {
+        var row = "|";
+        var headerRowSeparator = "---|";
+        row += new StringBuilder(headerRowSeparator.Length * numberOfColumn)
+                        .Insert(0, headerRowSeparator, numberOfColumn)
+                        .ToString();
+
+        return row;
+    }
+
+    #endregion
+
+    #region Hyperlinks and Styles
+
+    /// <summary>
+    /// Get all hyperlinks in document
+    /// </summary>
+    /// <param name="mainDocument"></param>
+    private List<HyperlinkRelationship> GetAllHyperlinks(MainDocumentPart mainDocument)
+    {
+        return mainDocument.HyperlinkRelationships.Where(x => x.IsExternal).ToList();
+    }
+
+    /// <summary>
+    /// Get Hyperlinkg
+    /// </summary>
+    /// <param name="element"></param>
+    /// <param name="hyperlinks"></param>
+    /// <returns></returns>
+    private static string GetHyperlink(Hyperlink element, List<HyperlinkRelationship> hyperlinks)
+    {
+        var stringToReturn = "";
+
+        // Generate text for hyperlink with decoration
+        try
+        {
+            stringToReturn += "[";
+            stringToReturn += element.InnerText;
+            stringToReturn += "]";
+
+            var hyperlink = hyperlinks?.FirstOrDefault(x => x.Id == element.Id);
+
+            // Only link with external (URL) hyperlink
+            if (hyperlink is not null && hyperlink.IsExternal)
             {
-                return stringToReturn;
+                stringToReturn += "(";
+                stringToReturn += hyperlink.Uri.AbsoluteUri;
+                stringToReturn += ")";
             }
-
+        }
+        catch (Exception)
+        {
             return stringToReturn;
         }
+
+        return stringToReturn;
+    }
 
         /// <summary>
         /// Get all styles in document
@@ -284,186 +280,183 @@ namespace RAG.Parsers.Docx
             }
         }
 
-        #endregion
+    #endregion
 
-        #region Labels and Decoration
+    #region Labels and Decoration
 
-        /// <summary>
-        /// Get text and styling associated
-        /// </summary>
-        /// <param name="element"></param>
-        /// <returns></returns>
-        private static string GetLabelAndDecoration(OpenXmlElement element)
+    /// <summary>
+    /// Get text and styling associated
+    /// </summary>
+    /// <param name="element"></param>
+    /// <returns></returns>
+    private static string GetLabelAndDecoration(OpenXmlElement element)
+    {
+        // Dispatcher
+        return element.FirstChild switch
         {
-            // Dispatcher
-            return element.FirstChild switch
-            {
-                RunProperties => GetLabelAndDecorationRunChild(element),
-                Text => GetLabelAndDecorationTextChild(element),
-                _ => GetLabelAndDecorationTextChild(element),
-            };
+            RunProperties => GetLabelAndDecorationRunChild(element),
+            Text => GetLabelAndDecorationTextChild(element),
+            _ => GetLabelAndDecorationTextChild(element),
+        };
+    }
+
+    /// <summary>
+    /// Get text and styling for a RunProperties element
+    /// </summary>
+    /// <param name="element"></param>
+    /// <returns></returns>
+    private static string GetLabelAndDecorationRunChild(OpenXmlElement element)
+    {
+        var stringToReturn = "";
+
+        try
+        {
+            var runProperties = (RunProperties)element.FirstChild;
+
+            // Detect decoration
+            var balise = "";
+            if (runProperties.Bold is not null)
+                balise += "**";
+
+            if (runProperties.Italic is not null)
+                balise += "*";
+            
+            var textToAdd = element.InnerText;
+
+            // Detect details - whitespace before/after
+            var whitespacePreWord = false;
+            if (textToAdd.StartsWith(" "))
+                whitespacePreWord = true;
+
+            var whitespacePostWord = false;
+            if (textToAdd.EndsWith(" "))
+                whitespacePostWord = true;
+
+            // Clean
+            textToAdd = textToAdd.TrimStart(' ');
+            textToAdd = textToAdd.TrimEnd(' ');
+
+            // Adapt return with details
+            if (whitespacePreWord)
+                stringToReturn += " ";
+            stringToReturn += balise;
+            stringToReturn += textToAdd;
+            stringToReturn += balise;
+            if (whitespacePostWord)
+                stringToReturn += " ";
         }
-
-        /// <summary>
-        /// Get text and styling for a RunProperties element
-        /// </summary>
-        /// <param name="element"></param>
-        /// <returns></returns>
-        private static string GetLabelAndDecorationRunChild(OpenXmlElement element)
+        catch (Exception)
         {
-            var stringToReturn = "";
-
-            try
-            {
-                var runProperties = (RunProperties)element.FirstChild;
-
-                // Detect decoration
-                var balise = "";
-                if (runProperties.Bold is not null)
-                    balise += "**";
-
-                if (runProperties.Italic is not null)
-                    balise += "*";
-                
-                var textToAdd = element.InnerText;
-
-                // Detect details - whitespace before/after
-                var whitespacePreWord = false;
-                if (textToAdd.StartsWith(" "))
-                    whitespacePreWord = true;
-
-                var whitespacePostWord = false;
-                if (textToAdd.EndsWith(" "))
-                    whitespacePostWord = true;
-
-                // Clean
-                textToAdd = textToAdd.TrimStart(' ');
-                textToAdd = textToAdd.TrimEnd(' ');
-
-                // Adapt return with details
-                if (whitespacePreWord)
-                    stringToReturn += " ";
-                stringToReturn += balise;
-                stringToReturn += textToAdd;
-                stringToReturn += balise;
-                if (whitespacePostWord)
-                    stringToReturn += " ";
-            }
-            catch (Exception)
-            {
-                return stringToReturn;
-            }
-
             return stringToReturn;
         }
 
-        /// <summary>
-        /// Get text and styling for a Text element
-        /// </summary>
-        /// <param name="element"></param>
-        /// <returns></returns>
-        private static string GetLabelAndDecorationTextChild(OpenXmlElement element)
+        return stringToReturn;
+    }
+
+    /// <summary>
+    /// Get text and styling for a Text element
+    /// </summary>
+    /// <param name="element"></param>
+    /// <returns></returns>
+    private static string GetLabelAndDecorationTextChild(OpenXmlElement element)
+    {
+        var stringToReturn = "";
+
+        try
         {
-            var stringToReturn = "";
+            var runProperties = (Text)element.FirstChild;
 
-            try
-            {
-                var runProperties = (Text)element.FirstChild;
-
-                stringToReturn = element.InnerText;
-            }
-            catch (Exception)
-            {
-                return stringToReturn;
-            }
-
+            stringToReturn = element.InnerText;
+        }
+        catch (Exception)
+        {
             return stringToReturn;
         }
 
-        #endregion
+        return stringToReturn;
+    }
 
-        #region TOC
+    #endregion
 
-        /// <summary>
-        /// Detect if element is from Table of Content
-        /// </summary>
-        /// <param name="paragraph"></param>
-        /// <returns></returns>
-        private bool DetectTOC(Paragraph paragraph)
+    #region TOC
+
+    /// <summary>
+    /// Detect if element is from Table of Content
+    /// </summary>
+    /// <param name="paragraph"></param>
+    /// <returns></returns>
+    private bool IsParagraphLinkedToTableOfContent(Paragraph paragraph, DocumentContext context)
+    {
+        try
         {
-            try
-            {
-                var paragraphProperties = (ParagraphProperties)paragraph.FirstChild;
-                var paragraphStyleId = (ParagraphStyleId)paragraphProperties.FirstChild;
-
-                if (dictionaryStyles.FirstOrDefault(x => x.styleName ==paragraphStyleId.Val.Value).isTOCStyle)
-                    return true;
-            }
-            catch (Exception)
-            {
-                return false;
-            }
-
-            return false;
-        }
-
-        #endregion
-
-        #region Titles
-
-        /// <summary>
-        /// Detect if element is a title
-        /// </summary>
-        /// <param name="paragraph"></param>
-        /// <returns></returns>
-        private bool DetectIfTitle(Paragraph paragraph)
-        {
-            try
-            {
-                var paragraphProperties = (ParagraphProperties)paragraph.FirstChild;
-                var paragraphStyleId = (ParagraphStyleId)paragraphProperties.FirstChild;
-
-                if (dictionaryStyles.FirstOrDefault(x => x.styleName == paragraphStyleId.Val.Value).isHeadingStyle)
-                    return true;
-            }
-            catch (Exception)
-            {
-                return false;
-            }
-
-            return false;
-        }
-
-        /// <summary>
-        /// Get title level and associated decoration
-        /// </summary>
-        /// <param name="paragraph"></param>
-        /// <returns></returns>
-        private string GetTitle(Paragraph paragraph)
-        {
-            var stringToReturn = "";
             var paragraphProperties = (ParagraphProperties)paragraph.FirstChild;
             var paragraphStyleId = (ParagraphStyleId)paragraphProperties.FirstChild;
 
-            // Get style from dictionary
-            var (styleName, isHeadingStyle, isTOCStyle) = dictionaryStyles.FirstOrDefault(x => x.styleName == paragraphStyleId.Val.Value);
-            if (isHeadingStyle)
-            {
-                // Get level and adapt for markdown
-                string lastChar = paragraphStyleId.Val.Value[^1..];
-                int.TryParse(lastChar, out var titleLvl);
-                titleLvl++;
-
-                stringToReturn += new string('#', titleLvl);
-                stringToReturn += " ";
-                stringToReturn += paragraph.InnerText;
-            }
-
-            return stringToReturn;
+            if (context.DictionaryStyles.ContainsKey(paragraphStyleId.Val.Value))
+                return context.DictionaryStyles[paragraphStyleId.Val.Value].isTOCStyle;
+        }
+        catch (Exception)
+        {
         }
 
-        #endregion
-
-        #endregion
+        return false;
     }
+
+    #endregion
+
+    #region Titles
+
+    /// <summary>
+    /// Detect if element is a title
+    /// </summary>
+    /// <param name="paragraph"></param>
+    /// <param name="context"></param>
+    /// <returns></returns>
+    private bool IsPaagraphLinkedToTitle(Paragraph paragraph, DocumentContext context)
+    {
+        try
+        {
+            var paragraphProperties = (ParagraphProperties)paragraph.FirstChild;
+            var paragraphStyleId = (ParagraphStyleId)paragraphProperties.FirstChild;
+
+            if (context.DictionaryStyles.ContainsKey(paragraphStyleId.Val.Value))
+                return context.DictionaryStyles[paragraphStyleId.Val.Value].isHeadingStyle;
+        }
+        catch (Exception)
+        {
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Get title level and associated decoration
+    /// </summary>
+    /// <param name="paragraph"></param>
+    /// <returns></returns>
+    private string GetTitle(Paragraph paragraph, DocumentContext context)
+    {
+        var stringToReturn = "";
+        var paragraphProperties = (ParagraphProperties)paragraph.FirstChild;
+        var paragraphStyleId = (ParagraphStyleId)paragraphProperties.FirstChild;
+
+        // Get style from dictionary
+        if(IsPaagraphLinkedToTitle(paragraph, context))
+        {
+            // Get level and adapt for markdown
+            string lastChar = paragraphStyleId.Val.Value[^1..];
+            int.TryParse(lastChar, out var titleLvl);
+            titleLvl++;
+
+            stringToReturn += new string('#', titleLvl);
+            stringToReturn += " ";
+            stringToReturn += paragraph.InnerText;
+        }
+
+        return stringToReturn;
+    }
+
+    #endregion
+
+    #endregion
 }
