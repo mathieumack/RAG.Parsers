@@ -21,13 +21,13 @@ public class XlsxParser()
     /// <param name="withQuotes"></param>
     /// <param name="worksheetNumberTemplate"></param>
     /// <returns></returns>
-    public string ToMarkdown(string filePath, bool withQuotes = true, string? worksheetNumberTemplate = null)
+    public string ExcelToMarkdown(string filePath, bool withQuotes = true, string? worksheetNumberTemplate = null)
     {
         // Open file
         using var stream = File.OpenRead(filePath);
 
         // Convert file
-        return ToMarkdown(stream);
+        return ExcelToMarkdown(stream, withQuotes, worksheetNumberTemplate);
     }
 
     #endregion

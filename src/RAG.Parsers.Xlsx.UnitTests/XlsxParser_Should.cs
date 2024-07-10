@@ -13,7 +13,7 @@ public class XlsxParser_Should
         var filePath = Path.Combine(Environment.CurrentDirectory, "TestFiles/TestSample.xlsx");
 
         // Act
-        var result = parser.ToMarkdown(filePath);
+        var result = parser.ExcelToMarkdown(filePath);
 
         // Assert
         Assert.IsNotNull(result);   

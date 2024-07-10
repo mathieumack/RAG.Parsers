@@ -15,19 +15,19 @@ namespace RAG.Parsers.Docx;
 public class DocxParser
 {
     #region Public Methods
-            
+
     /// <summary>
     /// Read file and open it
     /// </summary>
     /// <param name="filePath"></param>
     /// <returns></returns>
-    public string ToMarkdown(string filePath)
+    public string DocToMarkdown(string filePath)
     {
         // Open file
         using var stream = File.OpenRead(filePath);
 
         // Convert file
-        return ToMarkdown(stream);
+        return DocToMarkdown(stream);
     }
 
     #endregion
@@ -36,20 +36,20 @@ public class DocxParser
 
     #region Explore document
 
-        /// <summary>
-        /// Convert word document stream to text
-        /// </summary>
-        /// <param name="data"></param>
-        /// <returns></returns>
-        /// <exception cref="InvalidOperationException"></exception>
-        public string DocToMarkdown(Stream data)
+    /// <summary>
+    /// Convert word document stream to text
+    /// </summary>
+    /// <param name="data"></param>
+    /// <returns></returns>
+    /// <exception cref="InvalidOperationException"></exception>
+    public string DocToMarkdown(Stream data)
+    {
+        // Get file from stream
+        var wordprocessingDocument = WordprocessingDocument.Open(data, false);
+        try
         {
-            // Get file from stream
-            var wordprocessingDocument = WordprocessingDocument.Open(data, false);
-            try
-            {
-                // Stringbuilder for the output
-                StringBuilder sb = new();
+            // Stringbuilder for the output
+            StringBuilder sb = new();
 
             MainDocumentPart? mainPart = wordprocessingDocument.MainDocumentPart ??
                 throw new InvalidOperationException("The main document part is missing.");
@@ -63,20 +63,20 @@ public class DocxParser
                 Hyperlinks = GetAllHyperlinks(mainPart),
                 DictionaryStyles = GetAllStyles(mainPart)
             };
-            
+
             // Explore file
             var parts = mainPart.Document.Descendants().FirstOrDefault();
-            if (parts != null)                
+            if (parts != null)
                 // Explore all elements in file
                 foreach (var node in parts.ChildElements.Where(x => !string.IsNullOrEmpty(x.InnerText)))
                 {
                     if (node is Paragraph paragraph)
                         // Process Text and paragraph
-                        ProcessParagraph(paragraph, context, ref sb);                        
-                    else if (node is Table table)                        
+                        ProcessParagraph(paragraph, context, ref sb);
+                    else if (node is Table table)
                         // Process Table
-                        ProcessTable(table, ref sb);                        
-                }                
+                        ProcessTable(table, ref sb);
+                }
 
             // Return text generated
             return sb.ToString().Trim();
@@ -180,7 +180,7 @@ public class DocxParser
             }
             rowToBuild += "|";
 
-            sb.AppendLine(rowToBuild);                               
+            sb.AppendLine(rowToBuild);
 
             // Deal with separator needed for markdown
             if (firstRow)
@@ -258,27 +258,31 @@ public class DocxParser
         return stringToReturn;
     }
 
-        /// <summary>
-        /// Get all styles in document
-        /// </summary>
-        /// <param name="mainDocument"></param>
-        private void GetAllStyles(MainDocumentPart mainDocument)
+    /// <summary>
+    /// Get all styles in document
+    /// </summary>
+    /// <param name="mainDocument"></param>
+    private Dictionary<string, (bool isHeadingStyle, bool isTOCStyle)> GetAllStyles(MainDocumentPart mainDocument)
+    {
+        var styles = mainDocument.StyleDefinitionsPart.Styles.StylesPart.Styles;
+
+        var dictionaryStyles = new Dictionary<string, (bool isHeadingStyle, bool isTOCStyle)>();
+
+        foreach (Style style in styles.ChildElements.Where(x => x.GetType() == typeof(Style)).Cast<Style>())
         {
-            styles = mainDocument.StyleDefinitionsPart.Styles.StylesPart.Styles;
-            
-            foreach (Style style in styles.ChildElements.Where(x => x.GetType() == typeof(Style)).Cast<Style>())
+            var hasStyleName = style.StyleName != null;
+            bool isHeading = false;
+            bool isTOCStyle = false;
+            if (hasStyleName)
             {
-                var hasStyleName = style.StyleName != null;
-                bool isHeading = false;
-                bool isTOCStyle = false;
-                if (hasStyleName)
-                {
-                    isHeading = style.StyleName.Val.Value.Contains("heading");
-                    isTOCStyle = style.StyleName.Val.Value.Contains("toc");
-                }
-                dictionaryStyles.Add((style.StyleId, isHeading, isTOCStyle));
+                isHeading = style.StyleName.Val.Value.Contains("heading");
+                isTOCStyle = style.StyleName.Val.Value.Contains("toc");
             }
+            dictionaryStyles.Add(style.StyleId, (isHeading, isTOCStyle));
         }
+
+        return dictionaryStyles;
+    }
 
     #endregion
 
@@ -320,7 +324,7 @@ public class DocxParser
 
             if (runProperties.Italic is not null)
                 balise += "*";
-            
+
             var textToAdd = element.InnerText;
 
             // Detect details - whitespace before/after
@@ -441,7 +445,7 @@ public class DocxParser
         var paragraphStyleId = (ParagraphStyleId)paragraphProperties.FirstChild;
 
         // Get style from dictionary
-        if(IsPaagraphLinkedToTitle(paragraph, context))
+        if (IsPaagraphLinkedToTitle(paragraph, context))
         {
             // Get level and adapt for markdown
             string lastChar = paragraphStyleId.Val.Value[^1..];

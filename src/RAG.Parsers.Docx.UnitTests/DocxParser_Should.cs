@@ -11,7 +11,7 @@ public class DocxParser_Should
         var filePath = Path.Combine(Environment.CurrentDirectory, "TestFiles/TestSample.docx");
 
         // Act
-        var result = parser.ToMarkdown(filePath);
+        var result = parser.DocToMarkdown(filePath);
 
         // Assert
         Assert.IsNotNull(result);
