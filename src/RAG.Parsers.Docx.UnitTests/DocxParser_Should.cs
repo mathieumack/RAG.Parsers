@@ -1,20 +1,19 @@
-namespace RAG.Parsers.Docx.UnitTests
+namespace RAG.Parsers.Docx.UnitTests;
+
+[TestClass]
+public class DocxParser_Should
 {
-    [TestClass]
-    public class DocxParser_Should
+    [TestMethod]
+    public void ConvertWordToMarkdown_WhenOK()
     {
-        [TestMethod]
-        public void ConvertWordToMarkdown_WhenOK()
-        {
-            // Arrange
-            var docxParser = new DocxParser();
-            var filePath = Path.Combine(Environment.CurrentDirectory, "TestFiles/TestSample.docx");
+        // Arrange
+        var parser = new DocxParser();
+        var filePath = Path.Combine(Environment.CurrentDirectory, "TestFiles/TestSample.docx");
 
-            // Act
-            var result = docxParser.DocToMarkdown(filePath);
+        // Act
+        var result = parser.DocToMarkdown(filePath);
 
-            // Assert
-            Assert.IsNotNull(result);
-        }
+        // Assert
+        Assert.IsNotNull(result);
     }
 }

@@ -36,7 +36,7 @@
     <Content Include="MdFiles\images\sampleimagefromdalle.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestFiles\TestSample.xlsx">
+    <Content Include="TestFiles\*.*">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
