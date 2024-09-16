@@ -105,11 +105,11 @@ public class XlsxParser()
                         firstColumn = false;
                     }
 
-                    if (cell is { Value.IsNumber: true })
+                    if (cell is { CachedValue.IsNumber: true })
                         sb.Append(cell.CachedValue.GetNumber().ToString(CultureInfo.InvariantCulture));
-                    else if (cell is { Value.IsDateTime: true })
+                    else if (cell is { CachedValue.IsDateTime: true })
                         sb.Append(cell.CachedValue.GetDateTime().ToString(CultureInfo.InvariantCulture));
-                    else if (cell is { Value.IsBlank: true })
+                    else if (cell is { CachedValue.IsBlank: true })
                         sb.Append(cell.CachedValue.GetBlank().ToString());
                     else
                         sb.Append(cell.CachedValue);
