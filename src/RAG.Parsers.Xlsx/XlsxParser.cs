@@ -106,15 +106,13 @@ public class XlsxParser()
                     }
 
                     if (cell is { Value.IsNumber: true })
-                        sb.Append(TryGetValue<double>(cell));
+                        sb.Append(cell.CachedValue.GetNumber().ToString(CultureInfo.InvariantCulture));
                     else if (cell is { Value.IsDateTime: true })
-                        sb.Append(TryGetValue<DateTime>(cell));
-                    else if (cell is { Value.IsBoolean: true })
-                        sb.Append(TryGetValue<bool>(cell));
+                        sb.Append(cell.CachedValue.GetDateTime().ToString(CultureInfo.InvariantCulture));
                     else if (cell is { Value.IsBlank: true })
-                        sb.Append(cell.Value.GetBlank().ToString());
+                        sb.Append(cell.CachedValue.GetBlank().ToString());
                     else
-                        sb.Append(TryGetValue<string>(cell));
+                        sb.Append(cell.CachedValue);
 
                     sb.Append(DocumentContext.DefaultCellBalise);
                 }
@@ -124,13 +122,6 @@ public class XlsxParser()
         }
 
         return sb.ToString().Trim();
-    }
-
-    private T TryGetValue<T>(IXLCell cell)
-    {
-        if (cell.TryGetValue<T>(out var result))
-            return result;
-        return default(T);
     }
 
     #endregion
