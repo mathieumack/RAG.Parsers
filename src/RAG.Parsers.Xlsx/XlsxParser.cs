@@ -21,13 +21,13 @@ public class XlsxParser()
     /// <param name="withQuotes"></param>
     /// <param name="worksheetNumberTemplate"></param>
     /// <returns></returns>
-    public string ToMarkdown(string filePath, bool withQuotes = true, string? worksheetNumberTemplate = null)
+    public string ExcelToMarkdown(string filePath, bool withQuotes = true, string? worksheetNumberTemplate = null)
     {
         // Open file
         using var stream = File.OpenRead(filePath);
 
         // Convert file
-        return ToMarkdown(stream);
+        return ExcelToMarkdown(stream, withQuotes, worksheetNumberTemplate);
     }
 
     #endregion
@@ -42,7 +42,7 @@ public class XlsxParser()
     /// <param name="worksheetNumberTemplate"></param>
     /// <returns></returns>
     /// <exception cref="InvalidOperationException"></exception>
-    public string ToMarkdown(Stream data, bool withQuotes = true, string? worksheetNumberTemplate = null)
+    public string ExcelToMarkdown(Stream data, bool withQuotes = true, string? worksheetNumberTemplate = null)
     {
         using var workbook = new XLWorkbook(data);
         var sb = new StringBuilder();
@@ -105,15 +105,15 @@ public class XlsxParser()
                         firstColumn = false;
                     }
 
-                    if(cell is { Value.IsNumber: true })
-                        sb.Append(cell.Value.GetNumber().ToString(CultureInfo.InvariantCulture));
-                    else if(cell is { Value.IsDateTime: true })
-                        sb.Append(cell.Value.GetDateTime().ToString(CultureInfo.InvariantCulture));
-                    else if (cell is { Value.IsBlank: true })
-                        sb.Append(cell.Value.GetBlank().ToString());
+                    if (cell is { CachedValue.IsNumber: true })
+                        sb.Append(cell.CachedValue.GetNumber().ToString(CultureInfo.InvariantCulture));
+                    else if (cell is { CachedValue.IsDateTime: true })
+                        sb.Append(cell.CachedValue.GetDateTime().ToString(CultureInfo.InvariantCulture));
+                    else if (cell is { CachedValue.IsBlank: true })
+                        sb.Append(cell.CachedValue.GetBlank().ToString());
                     else
-                        sb.Append(cell.Value);
-                    
+                        sb.Append(cell.CachedValue);
+
                     sb.Append(DocumentContext.DefaultCellBalise);
                 }
                 
