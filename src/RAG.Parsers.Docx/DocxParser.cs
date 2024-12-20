@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 
 namespace RAG.Parsers.Docx;
@@ -144,53 +145,28 @@ public class DocxParser
         // Now add drawing elements on ths paragraph:
         foreach (var drawing in paragraph.Descendants<Drawing>())
         {
-            var image = drawing.Inline?.Graphic?.GraphicData?.GetFirstChild<DocumentFormat.OpenXml.Drawing.Pictures.Picture>();
-            
-            if (image == null) 
+            if (!TryGetImagePart(drawing, mainPart, out var imagePart, out var imageUri, out var imageFormat))
                 continue;
 
-            var imageUri = image.BlipFill?.Blip?.Embed?.Value;
-            
-            if (string.IsNullOrEmpty(imageUri) || context.Images.Any(e => e.Id == imageUri))
-                continue;
-
-            try
+            if (!context.Images.Any(e => e.Id == imageUri))
             {
-                // Retrieve the ImagePart from the mainPart using the imageUri
-                var imagePart = mainPart.GetPartById(imageUri) as ImagePart;
-                
-                if (imagePart == null)
-                    continue;
-
-                // Determine the image format
-                var contentTypeParts = imagePart.ContentType.Split('/');
-                var imageFormat = contentTypeParts.Length > 1 ? contentTypeParts[1] : null;
-                
-                if (string.IsNullOrEmpty(imageFormat))
-                    continue;
-
-                byte[] imageBytes;
-                using (var imageStream = imagePart.GetStream())
-                using (var memoryStream = new MemoryStream())
+                try
                 {
-                    imageStream.CopyTo(memoryStream);
-                    imageBytes = memoryStream.ToArray();
+                    var imageBytes = GetImageBytes(imagePart);
+                    context.Images.Add(new Models.ImageRef
+                    {
+                        Id = imageUri,
+                        Format = imageFormat,
+                        RawBytes = imageBytes
+                    });
                 }
-
-                context.Images.Add(new Models.ImageRef
+                catch (Exception ex)
                 {
-                    Id = imageUri,
-                    Format = imageFormat,
-                    RawBytes = imageBytes
-                });
+                    Console.WriteLine($"Error processing image with URI `{imageUri}`: {ex.Message}");
+                }
+            }
 
-                // Append the image reference to the string builder
-                sb.AppendLine($"![image](data:image/{imageFormat};imageRefId,{imageUri})");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error processing image with the following uri `{imageUri}`: {ex.Message}");
-            }
+            sb.AppendLine($"![image](data:image/{imageFormat};imageRefId,{imageUri})");
         }
 
     }
@@ -541,7 +517,44 @@ public class DocxParser
         };
     }
 
+    private string GetImageFormat(ImagePart imagePart)
+    {
+        var contentTypeParts = imagePart.ContentType.Split('/');
 
+        return contentTypeParts.Length > 1 ? contentTypeParts[1] : null;
+    }
+
+    bool TryGetImagePart(Drawing drawing, MainDocumentPart mainPart, out ImagePart imagePart, out string imageUri, out string imageFormat)
+    {
+        imagePart = null;
+        imageUri = null;
+        imageFormat = null;
+
+        var image = drawing.Inline?.Graphic?.GraphicData?.GetFirstChild<DocumentFormat.OpenXml.Drawing.Pictures.Picture>();
+        if (image == null)
+            return false;
+
+        imageUri = image.BlipFill?.Blip?.Embed?.Value;
+        if (string.IsNullOrEmpty(imageUri))
+            return false;
+
+        imagePart = mainPart.GetPartById(imageUri) as ImagePart;
+        if (imagePart == null)
+            return false;
+
+        imageFormat = GetImageFormat(imagePart);
+        return !string.IsNullOrEmpty(imageFormat);
+    }
+
+    byte[] GetImageBytes(ImagePart imagePart)
+    {
+        using (var imageStream = imagePart.GetStream())
+        using (var memoryStream = new MemoryStream())
+        {
+            imageStream.CopyTo(memoryStream);
+            return memoryStream.ToArray();
+        }
+    }
     #endregion
 
     #endregion
