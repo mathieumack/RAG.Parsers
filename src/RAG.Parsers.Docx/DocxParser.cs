@@ -1,12 +1,11 @@
-﻿using System;
+﻿using DocumentFormat.OpenXml;
+using DocumentFormat.OpenXml.Packaging;
+using DocumentFormat.OpenXml.Wordprocessing;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using DocumentFormat.OpenXml;
-using DocumentFormat.OpenXml.Packaging;
-using DocumentFormat.OpenXml.Wordprocessing;
-using RAG.Parsers.Docx.Models;
 
 namespace RAG.Parsers.Docx;
 
@@ -43,7 +42,7 @@ public class DocxParser
     /// <param name="data"></param>
     /// <returns></returns>
     /// <exception cref="InvalidOperationException"></exception>
-    public ExtractOutput DocToMarkdownWithContext(Stream data, HashSet<string> supportedFormats = null)
+    public ExtractOutput DocToMarkdownWithContext(Stream data)
     {
         // Get file from stream
         var context = new ExtractOutput()
