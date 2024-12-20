@@ -21,13 +21,13 @@ public class DocxParser
     /// </summary>
     /// <param name="filePath"></param>
     /// <returns></returns>
-    public string DocToMarkdown(string filePath)
+    public ExtractOutput DocToMarkdownWithContext(string filePath)
     {
         // Open file
         using var stream = File.OpenRead(filePath);
 
         // Convert file
-        return DocToMarkdown(stream);
+        return DocToMarkdownWithContext(stream);
     }
 
     #endregion
@@ -42,9 +42,16 @@ public class DocxParser
     /// <param name="data"></param>
     /// <returns></returns>
     /// <exception cref="InvalidOperationException"></exception>
-    public string DocToMarkdown(Stream data)
+    public ExtractOutput DocToMarkdownWithContext(Stream data)
     {
         // Get file from stream
+        var context = new ExtractOutput()
+        {
+            Hyperlinks = new(),
+            DictionaryStyles = new(),
+            Images = new()
+        };
+
         var wordprocessingDocument = WordprocessingDocument.Open(data, false);
         try
         {
@@ -58,34 +65,34 @@ public class DocxParser
                 throw new InvalidOperationException("The document body is missing.");
 
             // Get Hyperlinks and Styles
-            var context = new DocumentContext()
-            {
-                Hyperlinks = GetAllHyperlinks(mainPart),
-                DictionaryStyles = GetAllStyles(mainPart)
-            };
 
             // Explore file
             var parts = mainPart.Document.Descendants().FirstOrDefault();
             if (parts != null)
                 // Explore all elements in file
-                foreach (var node in parts.ChildElements.Where(x => !string.IsNullOrEmpty(x.InnerText)))
+                foreach (var node in parts.ChildElements)
                 {
                     if (node is Paragraph paragraph)
                         // Process Text and paragraph
-                        ProcessParagraph(paragraph, context, ref sb);
+                        ProcessParagraph(mainPart, paragraph, context, ref sb);
                     else if (node is Table table)
                         // Process Table
                         ProcessTable(table, ref sb);
                 }
 
             // Return text generated
-            return sb.ToString().Trim();
+            var textContent = sb.ToString().Trim();
+            context.Output = textContent;
+
+            return context;
         }
         finally
         {
             // Release file
             wordprocessingDocument.Dispose();
         }
+
+        return context;
     }
 
     #endregion
@@ -98,7 +105,10 @@ public class DocxParser
     /// <param name="paragraph"></param>
     /// <param name="context"></param>
     /// <param name="sb"></param>
-    private void ProcessParagraph(Paragraph paragraph, DocumentContext context, ref StringBuilder sb)
+    private void ProcessParagraph(MainDocumentPart mainPart, 
+                                    Paragraph paragraph, 
+                                    ExtractOutput context, 
+                                    ref StringBuilder sb)
     {
         var stringToAdd = "";
 
@@ -128,10 +138,26 @@ public class DocxParser
                 stringToAdd += GetLabelAndDecoration(child);
         }
 
-        if (string.IsNullOrEmpty(stringToAdd))
-            return;
+        if (!string.IsNullOrEmpty(stringToAdd))
+            sb.AppendLine(stringToAdd);
 
-        sb.AppendLine(stringToAdd);
+        // Now add drawing elements on ths paragraph:
+        foreach (var drawing in paragraph.Descendants<Drawing>())
+        { 
+            // Try to find drawing elements in children :
+            var image = drawing.Inline.Graphic.GraphicData.GetFirstChild<DocumentFormat.OpenXml.Drawing.Pictures.Picture>();
+            var imageUri = image.BlipFill.Blip.Embed.Value;
+
+            if (!context.Images.Any(e => e.Id == imageUri))
+            {
+                var imagePart = (ImagePart)mainPart.GetPartById(imageUri);
+                var imageStream = imagePart.GetStream();
+                var imageBytes = new byte[imageStream.Length];
+                imageStream.Read(imageBytes, 0, imageBytes.Length);
+                context.Images.Add(new Models.ImageRef() { Id = imageUri, RawBytes = imageBytes });
+            }
+            sb.AppendLine($"![image](data:image/png;imageRefId,{imageUri})");
+        }
     }
 
     #endregion
@@ -389,7 +415,7 @@ public class DocxParser
     /// </summary>
     /// <param name="paragraph"></param>
     /// <returns></returns>
-    private bool IsParagraphLinkedToTableOfContent(Paragraph paragraph, DocumentContext context)
+    private bool IsParagraphLinkedToTableOfContent(Paragraph paragraph, ExtractOutput context)
     {
         try
         {
@@ -416,7 +442,7 @@ public class DocxParser
     /// <param name="paragraph"></param>
     /// <param name="context"></param>
     /// <returns></returns>
-    private bool IsPaagraphLinkedToTitle(Paragraph paragraph, DocumentContext context)
+    private bool IsPaagraphLinkedToTitle(Paragraph paragraph, ExtractOutput context)
     {
         try
         {
@@ -438,7 +464,7 @@ public class DocxParser
     /// </summary>
     /// <param name="paragraph"></param>
     /// <returns></returns>
-    private string GetTitle(Paragraph paragraph, DocumentContext context)
+    private string GetTitle(Paragraph paragraph, ExtractOutput context)
     {
         var stringToReturn = "";
         var paragraphProperties = (ParagraphProperties)paragraph.FirstChild;
@@ -459,6 +485,27 @@ public class DocxParser
 
         return stringToReturn;
     }
+
+    #endregion
+
+    #region Image
+
+    /// <summary>
+    /// Get image content
+    /// </summary>
+    /// <param name="element"></param>
+    /// <returns></returns>
+    private static string GetImageContent(OpenXmlElement element)
+    {
+        // Dispatcher
+        return element.FirstChild switch
+        {
+            RunProperties => GetLabelAndDecorationRunChild(element),
+            Text => GetLabelAndDecorationTextChild(element),
+            _ => GetLabelAndDecorationTextChild(element),
+        };
+    }
+
 
     #endregion
 

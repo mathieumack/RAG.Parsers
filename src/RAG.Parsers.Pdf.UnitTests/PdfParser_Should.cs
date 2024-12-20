@@ -14,6 +14,6 @@ public class PdfParser_Should
         var result = parser.ToMarkdown(filePath);
 
         // Assert
-        Assert.IsNotNull(result);
+        Assert.IsNotNull(result.Output);
     }
 }

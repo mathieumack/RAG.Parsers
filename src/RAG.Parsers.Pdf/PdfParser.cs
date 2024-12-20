@@ -9,6 +9,8 @@ using System.Collections.Generic;
 using UglyToad.PdfPig.Content;
 using UglyToad.PdfPig.DocumentLayoutAnalysis.TextExtractor;
 using System.IO;
+using RAG.Parsers.Pdf.Models;
+using System.Linq;
 
 namespace RAG.Parsers.Pdf;
 
@@ -24,7 +26,7 @@ public class PdfParser
     /// </summary>
     /// <param name="filePath"></param>
     /// <returns></returns>
-    public string ToMarkdown(string filePath)
+    public ExtractOutput ToMarkdown(string filePath)
     {
         // Open file
         using var stream = File.OpenRead(filePath);
@@ -38,8 +40,14 @@ public class PdfParser
     /// </summary>
     /// <param name="data"></param>
     /// <returns></returns>
-    public string ToMarkdown(Stream data)
+    public ExtractOutput ToMarkdown(Stream data)
     {
+        var result = new ExtractOutput()
+        {
+            Images = new(),
+            Output = ""
+        };
+
         StringBuilder output = new StringBuilder();
 
         // Preview for next evolutions :
@@ -55,11 +63,25 @@ public class PdfParser
 
                 string? text = ContentOrderTextExtractor.GetText(page);
                 output.AppendLine(text);
+
+                // Extract images :
+                var images = page.GetImages();
+                foreach(var image in images)
+                {
+                    result.Images.Add(new ImageRef()
+                    {
+                        Id = Guid.NewGuid().ToString(),
+                        RawBytes = image.RawBytes
+                    });
+                    output.AppendLine($"![image](data:image/png;imageRefId,{result.Images.Last().Id})");
+                }
             }
         }
 
         // Convert file
-        return output.ToString();
+        result.Output = output.ToString();
+
+        return result;
     }
 
     #endregion
