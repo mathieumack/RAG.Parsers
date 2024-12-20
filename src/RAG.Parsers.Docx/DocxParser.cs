@@ -6,6 +6,7 @@ using System.Text;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
+using RAG.Parsers.Docx.Models;
 
 namespace RAG.Parsers.Docx;
 
@@ -42,7 +43,7 @@ public class DocxParser
     /// <param name="data"></param>
     /// <returns></returns>
     /// <exception cref="InvalidOperationException"></exception>
-    public ExtractOutput DocToMarkdownWithContext(Stream data)
+    public ExtractOutput DocToMarkdownWithContext(Stream data, HashSet<string> supportedFormats = null)
     {
         // Get file from stream
         var context = new ExtractOutput()
@@ -106,9 +107,9 @@ public class DocxParser
     /// <param name="context"></param>
     /// <param name="sb"></param>
     private void ProcessParagraph(MainDocumentPart mainPart, 
-                                    Paragraph paragraph, 
-                                    ExtractOutput context, 
-                                    ref StringBuilder sb)
+                                  Paragraph paragraph, 
+                                  ExtractOutput context,
+                                  ref StringBuilder sb)
     {
         var stringToAdd = "";
 
@@ -143,21 +144,56 @@ public class DocxParser
 
         // Now add drawing elements on ths paragraph:
         foreach (var drawing in paragraph.Descendants<Drawing>())
-        { 
-            // Try to find drawing elements in children :
-            var image = drawing.Inline.Graphic.GraphicData.GetFirstChild<DocumentFormat.OpenXml.Drawing.Pictures.Picture>();
-            var imageUri = image.BlipFill.Blip.Embed.Value;
+        {
+            var image = drawing.Inline?.Graphic?.GraphicData?.GetFirstChild<DocumentFormat.OpenXml.Drawing.Pictures.Picture>();
+            
+            if (image == null) 
+                continue;
 
-            if (!context.Images.Any(e => e.Id == imageUri))
+            var imageUri = image.BlipFill?.Blip?.Embed?.Value;
+            
+            if (string.IsNullOrEmpty(imageUri) || context.Images.Any(e => e.Id == imageUri))
+                continue;
+
+            try
             {
-                var imagePart = (ImagePart)mainPart.GetPartById(imageUri);
-                var imageStream = imagePart.GetStream();
-                var imageBytes = new byte[imageStream.Length];
-                imageStream.Read(imageBytes, 0, imageBytes.Length);
-                context.Images.Add(new Models.ImageRef() { Id = imageUri, RawBytes = imageBytes });
+                // Retrieve the ImagePart from the mainPart using the imageUri
+                var imagePart = mainPart.GetPartById(imageUri) as ImagePart;
+                
+                if (imagePart == null)
+                    continue;
+
+                // Determine the image format
+                var contentTypeParts = imagePart.ContentType.Split('/');
+                var imageFormat = contentTypeParts.Length > 1 ? contentTypeParts[1] : null;
+                
+                if (string.IsNullOrEmpty(imageFormat))
+                    continue;
+
+                byte[] imageBytes;
+                using (var imageStream = imagePart.GetStream())
+                using (var memoryStream = new MemoryStream())
+                {
+                    imageStream.CopyTo(memoryStream);
+                    imageBytes = memoryStream.ToArray();
+                }
+
+                context.Images.Add(new Models.ImageRef
+                {
+                    Id = imageUri,
+                    Format = imageFormat,
+                    RawBytes = imageBytes
+                });
+
+                // Append the image reference to the string builder
+                sb.AppendLine($"![image](data:image/{imageFormat};imageRefId,{imageUri})");
             }
-            sb.AppendLine($"![image](data:image/png;imageRefId,{imageUri})");
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error processing image with the following uri `{imageUri}`: {ex.Message}");
+            }
         }
+
     }
 
     #endregion
