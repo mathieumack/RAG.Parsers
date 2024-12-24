@@ -2,6 +2,7 @@
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 using Microsoft.Extensions.Logging;
+using RAG.Parsers.Docx.Models.Table;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -184,69 +185,207 @@ public class DocxParser
         sb.Append($"![image](data:image/{imageFormat};imageRefId,{imageUri})");
     }
 
-    #endregion
-
-    #region Tables
-
     /// <summary>
-    /// Process Table
+    /// Processes a table element, converting it to Markdown format and appending it to the output.
     /// </summary>
-    /// <param name="mainPart"></param>
-    /// <param name="table"></param>
-    /// <param name="context"></param>
-    /// <param name="sb"></param>
+    /// <param name="mainPart">The main document part.</param>
+    /// <param name="table">The table element to process.</param>
+    /// <param name="context">The context containing extracted information.</param>
+    /// <param name="sb">The StringBuilder to append the Markdown output to.</param>
     private void ProcessTable(MainDocumentPart mainPart, Table table, ExtractOutput context, ref StringBuilder sb)
     {
-        var firstRow = true;
+        var cellMatrix = BuildCellMatrix(table);
+        var columnCount = cellMatrix.Max(row => row.Count);
+        var isFirstRow = true;
 
-        // Explore table row in sub elements
-        foreach (var row in table.ChildElements.Where(x => x.GetType() == typeof(TableRow)))
+        foreach (var matrixRow in cellMatrix)
         {
             var rowToBuild = new StringBuilder();
 
-            // Get number of column
-            var numberOfColumn = row.Where(x => x.GetType() == typeof(TableCell)).Count();
-
-            // Detect if header 
-            // If not, add a 'blank' header row
-            var childType = row.ChildElements.FirstOrDefault().GetType();
-            if (firstRow && childType == typeof(TableCell))
+            // Add blank header if first row isn't header
+            if (isFirstRow && matrixRow.Any() && matrixRow[0].Cell != null)
             {
-                var headerRow = "|";
-                var headerRowSeparator = "-|";
-                headerRow += new StringBuilder(headerRowSeparator.Length * numberOfColumn)
-                                .Insert(0, headerRowSeparator, numberOfColumn)
-                                .ToString();
-
-                sb.AppendLine(headerRow);
-                sb.AppendLine(BuildTableHeaderSeparator(numberOfColumn));
-
-                firstRow = false;
+                AppendBlankHeader(sb, columnCount);
+                isFirstRow = false;
             }
 
-            // Explore cells in row
-            foreach (var cell in row.Where(x => x.GetType() == typeof(TableCell)))
+            for (int colIndex = 0; colIndex < columnCount; colIndex++)
             {
-                rowToBuild.Append("|" + cell.InnerText);
+                var cellInfo = matrixRow.Count > colIndex ? matrixRow[colIndex] : null;
 
-                foreach (var drawing in cell.Descendants<Drawing>())
+                if (cellInfo?.IsOccupied ?? false)
                 {
-                    ProcessDrawing(drawing, mainPart, context, ref rowToBuild);
+                    rowToBuild.Append('|');
+                    if (cellInfo.Cell != null)
+                    {
+                        ProcessCellContent(cellInfo.Cell, mainPart, context, ref rowToBuild);
+
+                        if (cellInfo.VerticalMerge == MergeType.Continue)
+                        {
+                            rowToBuild.Append("^^");
+                        }
+                    }
+                }
+                else if (cellInfo?.HorizontalMerge == MergeType.Continue)
+                {
+                    rowToBuild.Append("|<<");
+                }
+                else
+                {
+                    rowToBuild.Append('|');
                 }
             }
 
-            sb.AppendLine("|" + rowToBuild);
+            sb.AppendLine(rowToBuild.ToString() + "|");
 
-            // Deal with separator needed for markdown
-            if (firstRow)
+            if (isFirstRow)
             {
-                sb.AppendLine(BuildTableHeaderSeparator(numberOfColumn));
+                sb.AppendLine(BuildTableHeaderSeparator(columnCount));
+                isFirstRow = false;
+            }
+        }
+        sb.AppendLine();
+    }
 
-                firstRow = false;
+    /// <summary>
+    /// Appends a blank header row to the output for a table with the specified number of columns.
+    /// </summary>
+    /// <param name="sb">The StringBuilder to append the blank header to.</param>
+    /// <param name="columnCount">The number of columns in the table.</param>
+    private void AppendBlankHeader(StringBuilder sb, int columnCount)
+    {
+        var headerRow = "|";
+        for (int i = 0; i < columnCount; i++)
+        {
+            headerRow += " |";
+        }
+        sb.AppendLine(headerRow);
+        sb.AppendLine(BuildTableHeaderSeparator(columnCount));
+    }
+
+    /// <summary>
+    /// Processes the content of a table cell, converting it to Markdown format and appending it to the output.
+    /// </summary>
+    /// <param name="cell">The table cell to process.</param>
+    /// <param name="mainPart">The main document part.</param>
+    /// <param name="context">The context containing extracted information.</param>
+    /// <param name="sb">The StringBuilder to append the Markdown output to.</param>
+    private void ProcessCellContent(TableCell cell, MainDocumentPart mainPart, ExtractOutput context, ref StringBuilder sb)
+    {
+        sb.Append(cell.InnerText);
+        foreach (var drawing in cell.Descendants<Drawing>())
+        {
+            ProcessDrawing(drawing, mainPart, context, ref sb);
+        }
+    }
+
+    /// <summary>
+    /// Builds a matrix of CellInfo objects representing the structure of the table, including merged cells.
+    /// </summary>
+    /// <param name="table">The table element to analyze.</param>
+    /// <returns>A list of lists of CellInfo objects representing the table structure.</returns>
+    private List<List<CellInfo>> BuildCellMatrix(Table table)
+    {
+        var matrix = new List<List<CellInfo>>();
+        int rowIndex = 0;
+
+        foreach (var row in table.Elements<TableRow>())
+        {
+            var matrixRow = new List<CellInfo>();
+            int colIndex = 0;
+
+            while (colIndex < matrix.FirstOrDefault()?.Count || row.Elements<TableCell>().Any())
+            {
+                while (colIndex < matrixRow.Count && matrixRow[colIndex].IsOccupied)
+                {
+                    colIndex++;
+                }
+
+                if (!row.Elements<TableCell>().Any()) break;
+
+                var cell = row.Elements<TableCell>().First();
+                var cellInfo = AnalyzeCell(cell, rowIndex, colIndex);
+
+                for (int i = 0; i < cellInfo.GridSpan; i++)
+                {
+                    matrixRow.Add(new CellInfo
+                    {
+                        Cell = i == 0 ? cell : null,
+                        HorizontalMerge = i == 0 ? MergeType.First : MergeType.Continue,
+                        IsOccupied = true
+                    });
+                }
+
+                if (cellInfo.VerticalMerge == MergeType.First)
+                {
+                    for (int i = 1; i < cellInfo.VerticalSpan; i++)
+                    {
+                        while (matrix.Count <= rowIndex + i)
+                        {
+                            matrix.Add(new List<CellInfo>());
+                        }
+                        var targetRow = matrix[rowIndex + i];
+                        while (targetRow.Count <= colIndex)
+                        {
+                            targetRow.Add(new CellInfo());
+                        }
+                        targetRow[colIndex] = new CellInfo
+                        {
+                            VerticalMerge = MergeType.Continue,
+                            IsOccupied = true
+                        };
+                    }
+                }
+
+                row.RemoveChild(cell);
+                colIndex += cellInfo.GridSpan;
+            }
+
+            matrix.Add(matrixRow);
+            rowIndex++;
+        }
+
+        return matrix;
+    }
+
+    /// <summary>
+    /// Analyzes a table cell to determine its merge properties and span.
+    /// </summary>
+    /// <param name="cell">The table cell to analyze.</param>
+    /// <param name="rowIndex">The row index of the cell in the table.</param>
+    /// <param name="colIndex">The column index of the cell in the table.</param>
+    /// <returns>A CellInfo object containing the cell's properties.</returns>
+    private CellInfo AnalyzeCell(TableCell cell, int rowIndex, int colIndex)
+    {
+        var cellInfo = new CellInfo { Cell = cell };
+
+        var tcPr = cell.GetFirstChild<TableCellProperties>();
+        if (tcPr != null)
+        {
+            var hMerge = tcPr.GetFirstChild<HorizontalMerge>();
+            if (hMerge != null)
+            {
+                cellInfo.HorizontalMerge = hMerge.Val == null || hMerge.Val == "continue"
+                    ? MergeType.Continue
+                    : MergeType.First;
+            }
+
+            var vMerge = tcPr.GetFirstChild<VerticalMerge>();
+            if (vMerge != null)
+            {
+                cellInfo.VerticalMerge = vMerge.Val == null || vMerge.Val == "continue"
+                    ? MergeType.Continue
+                    : MergeType.First;
+            }
+
+            var gridSpan = tcPr.GetFirstChild<GridSpan>();
+            if (gridSpan != null)
+            {
+                cellInfo.GridSpan = gridSpan.Val.Value;
             }
         }
 
-        sb.AppendLine();
+        return cellInfo;
     }
 
     /// <summary>
