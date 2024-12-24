@@ -1,6 +1,7 @@
 ﻿using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -77,7 +78,7 @@ public class DocxParser
                         ProcessParagraph(mainPart, paragraph, context, ref sb);
                     else if (node is Table table)
                         // Process Table
-                        ProcessTable(table, ref sb);
+                        ProcessTable(mainPart, table, context, ref sb);
                 }
 
             // Return text generated
@@ -144,30 +145,46 @@ public class DocxParser
         // Now add drawing elements on ths paragraph:
         foreach (var drawing in paragraph.Descendants<Drawing>())
         {
-            if (!TryGetImagePart(drawing, mainPart, out var imagePart, out var imageUri, out var imageFormat))
-                continue;
+            ProcessDrawing(drawing, mainPart, context, ref sb);
+            sb.AppendLine();
+        }
+    }
 
-            if (!context.Images.Any(e => e.Id == imageUri))
-            {
-                try
-                {
-                    var imageBytes = GetImageBytes(imagePart);
-                    context.Images.Add(new Models.ImageRef
-                    {
-                        Id = imageUri,
-                        Format = imageFormat,
-                        RawBytes = imageBytes
-                    });
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Error processing image with URI `{imageUri}`: {ex.Message}");
-                }
-            }
+    /// <summary>
+    /// Processes a Drawing element, extracts the image, and appends the image reference to the md output.
+    /// </summary>
+    /// <param name="drawing">The Drawing element to process.</param>
+    /// <param name="mainPart">The main document part.</param>
+    /// <param name="context">The context containing extracted information.</param>
+    /// <param name="sb">The StringBuilder to append the image reference to.</param>
+    private void ProcessDrawing(Drawing drawing, MainDocumentPart mainPart, ExtractOutput context, ref StringBuilder sb)
+    {
+        if (!TryGetImagePart(drawing, mainPart, out var imagePart, out var imageUri, out var imageFormat))
+        {
+            System.Diagnostics.Trace.TraceInformation("No image part found for the given drawing.");
 
-            sb.AppendLine($"![image](data:image/{imageFormat};imageRefId,{imageUri})");
+            return;
         }
 
+        if (!context.Images.Any(e => e.Id == imageUri))
+        {
+            try
+            {
+                var imageBytes = GetImageBytes(imagePart);
+                context.Images.Add(new Models.ImageRef
+                {
+                    Id = imageUri,
+                    Format = imageFormat,
+                    RawBytes = imageBytes
+                });
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Trace.TraceInformation($"Error processing image with URI `{imageUri}`: {ex.Message}");
+            }
+        }
+
+        sb.Append($"![image](data:image/{imageFormat};imageRefId,{imageUri})");
     }
 
     #endregion
@@ -177,16 +194,18 @@ public class DocxParser
     /// <summary>
     /// Process Table
     /// </summary>
+    /// <param name="mainPart"></param>
     /// <param name="table"></param>
+    /// <param name="context"></param>
     /// <param name="sb"></param>
-    private static void ProcessTable(Table table, ref StringBuilder sb)
+    private void ProcessTable(MainDocumentPart mainPart, Table table, ExtractOutput context, ref StringBuilder sb)
     {
         var firstRow = true;
 
         // Explore table row in sub elements
         foreach (var row in table.ChildElements.Where(x => x.GetType() == typeof(TableRow)))
         {
-            var rowToBuild = "";
+            var rowToBuild = new StringBuilder();
 
             // Get number of column
             var numberOfColumn = row.Where(x => x.GetType() == typeof(TableCell)).Count();
@@ -211,12 +230,15 @@ public class DocxParser
             // Explore cells in row
             foreach (var cell in row.Where(x => x.GetType() == typeof(TableCell)))
             {
-                rowToBuild += "|";
-                rowToBuild += cell.InnerText;
-            }
-            rowToBuild += "|";
+                rowToBuild.Append("|" + cell.InnerText);
 
-            sb.AppendLine(rowToBuild);
+                foreach (var drawing in cell.Descendants<Drawing>())
+                {
+                    ProcessDrawing(drawing, mainPart, context, ref rowToBuild);
+                }
+            }
+
+            sb.AppendLine("|" + rowToBuild);
 
             // Deal with separator needed for markdown
             if (firstRow)
@@ -516,6 +538,11 @@ public class DocxParser
         };
     }
 
+    /// <summary>
+    /// Gets the image format from the ImagePart.
+    /// </summary>
+    /// <param name="imagePart">The image part.</param>
+    /// <returns>The image format as a string.</returns>
     private string GetImageFormat(ImagePart imagePart)
     {
         var contentTypeParts = imagePart.ContentType.Split('/');
@@ -523,13 +550,24 @@ public class DocxParser
         return contentTypeParts.Length > 1 ? contentTypeParts[1] : null;
     }
 
+    /// <summary>
+    /// Tries to get the ImagePart, image URI, and image format from a Drawing element.
+    /// </summary>
+    /// <param name="drawing">The drawing element.</param>
+    /// <param name="mainPart">The main document part.</param>
+    /// <param name="imagePart">The image part.</param>
+    /// <param name="imageUri">The image URI.</param>
+    /// <param name="imageFormat">The image format.</param>
+    /// <returns>True if the image part is found; otherwise, false.</returns>
     bool TryGetImagePart(Drawing drawing, MainDocumentPart mainPart, out ImagePart imagePart, out string imageUri, out string imageFormat)
     {
         imagePart = null;
         imageUri = null;
         imageFormat = null;
 
-        var image = drawing.Inline?.Graphic?.GraphicData?.GetFirstChild<DocumentFormat.OpenXml.Drawing.Pictures.Picture>();
+        var graphic = drawing.Inline?.Graphic ?? drawing.Anchor.Descendants<DocumentFormat.OpenXml.Drawing.Graphic>().FirstOrDefault();
+        var image = graphic?.GraphicData?.GetFirstChild<DocumentFormat.OpenXml.Drawing.Pictures.Picture>();
+
         if (image == null)
             return false;
 
@@ -542,9 +580,15 @@ public class DocxParser
             return false;
 
         imageFormat = GetImageFormat(imagePart);
+
         return !string.IsNullOrEmpty(imageFormat);
     }
 
+    /// <summary>
+    /// Gets the image bytes from an ImagePart.
+    /// </summary>
+    /// <param name="imagePart">The image part.</param>
+    /// <returns>The image bytes as a byte array.</returns>
     byte[] GetImageBytes(ImagePart imagePart)
     {
         using (var imageStream = imagePart.GetStream())
