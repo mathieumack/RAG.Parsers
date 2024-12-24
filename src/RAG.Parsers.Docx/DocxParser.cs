@@ -166,22 +166,19 @@ public class DocxParser
             return;
         }
 
-        if (!context.Images.Any(e => e.Id == imageUri))
+        try
         {
-            try
+            var imageBytes = GetImageBytes(imagePart);
+            context.Images.Add(new Models.ImageRef
             {
-                var imageBytes = GetImageBytes(imagePart);
-                context.Images.Add(new Models.ImageRef
-                {
-                    Id = imageUri,
-                    Format = imageFormat,
-                    RawBytes = imageBytes
-                });
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Trace.TraceInformation($"Error processing image with URI `{imageUri}`: {ex.Message}");
-            }
+                Id = imageUri,
+                Format = imageFormat,
+                RawBytes = imageBytes
+            });
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Trace.TraceInformation($"Error processing image with URI `{imageUri}`: {ex.Message}");
         }
 
         sb.Append($"![image](data:image/{imageFormat};imageRefId,{imageUri})");

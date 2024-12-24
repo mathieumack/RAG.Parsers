@@ -35,7 +35,7 @@ public class DocxParser_Should
         // Arrange
         var parser = new DocxParser();
         var filePath = GetTestFilePath();
-        const int expectedImageCount = 3;
+        const int expectedImageCount = 8;
 
         // Act
         var result = parser.DocToMarkdownWithContext(filePath);
