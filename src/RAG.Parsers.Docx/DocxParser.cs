@@ -16,6 +16,13 @@ namespace RAG.Parsers.Docx;
 /// </summary>
 public class DocxParser
 {
+    private readonly ILogger<DocxParser> logger;
+
+    public DocxParser(ILogger<DocxParser> logger)
+    {
+        this.logger = logger;
+    }
+
     #region Public Methods
 
     /// <summary>
@@ -93,8 +100,6 @@ public class DocxParser
             // Release file
             wordprocessingDocument.Dispose();
         }
-
-        return context;
     }
 
     #endregion
@@ -162,7 +167,7 @@ public class DocxParser
     {
         if (!TryGetImagePart(drawing, mainPart, out var imagePart, out var imageUri, out var imageFormat))
         {
-            System.Diagnostics.Trace.TraceInformation("No image part found for the given drawing.");
+            logger.LogInformation("DocxParser-No image part found for the given drawing.");
 
             return;
         }
@@ -170,19 +175,23 @@ public class DocxParser
         try
         {
             var imageBytes = GetImageBytes(imagePart);
+
+            var raw = $"![image](data:image/{imageFormat};imageRefId,{imageUri})";
+            sb.Append(raw);
+
             context.Images.Add(new Models.ImageRef
             {
                 Id = imageUri,
                 Format = imageFormat,
+                MarkdownRaw = raw,
                 RawBytes = imageBytes
             });
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Trace.TraceInformation($"Error processing image with URI `{imageUri}`: {ex.Message}");
+            logger.LogInformation($"DocxParser-Error processing image with URI `{imageUri}`: {ex.Message}");
         }
 
-        sb.Append($"![image](data:image/{imageFormat};imageRefId,{imageUri})");
     }
 
     /// <summary>
