@@ -176,9 +176,9 @@ public class DocxParser
         {
             var imageBytes = GetImageBytes(imagePart);
 
-            var id = Guid.NewGuid().ToString();
+            var id = $"{Guid.NewGuid()}.{imageFormat}";
 
-            var raw = $"![image](data:image/{imageFormat};imageRefId,{id})";
+            var raw = $"![image](data:image/{imageFormat};{id})";
             sb.Append(raw);
 
             context.Images.Add(new Models.ImageRef
