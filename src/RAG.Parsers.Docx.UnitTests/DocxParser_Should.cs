@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging;
+
 namespace RAG.Parsers.Docx.UnitTests;
 
 [TestClass]
@@ -33,7 +35,10 @@ public class DocxParser_Should
     public void ConvertWordToMarkdownWithContext_WhenOK()
     {
         // Arrange
-        var parser = new DocxParser();
+        using var loggerFactory = LoggerFactory.Create(loggingBuilder => loggingBuilder
+                    .SetMinimumLevel(LogLevel.Trace)
+                    .AddConsole());
+        var parser = new DocxParser(loggerFactory.CreateLogger<DocxParser>());
         var filePath = GetTestFilePath();
         const int expectedImageCount = 8;
 
@@ -49,7 +54,10 @@ public class DocxParser_Should
     public void CheckImageFormat_WhenJpegExists()
     {
         // Arrange
-        var parser = new DocxParser();
+        using var loggerFactory = LoggerFactory.Create(loggingBuilder => loggingBuilder
+                    .SetMinimumLevel(LogLevel.Trace)
+                    .AddConsole());
+        var parser = new DocxParser(loggerFactory.CreateLogger<DocxParser>());
         var filePath = GetTestFilePath();
         const string expectedImageFormat = "jpeg";
         const int expectedJpegCount = 1;
@@ -68,7 +76,10 @@ public class DocxParser_Should
     public void CheckImageTagCount()
     {
         // Arrange
-        var parser = new DocxParser();
+        using var loggerFactory = LoggerFactory.Create(loggingBuilder => loggingBuilder
+                    .SetMinimumLevel(LogLevel.Trace)
+                    .AddConsole());
+        var parser = new DocxParser(loggerFactory.CreateLogger<DocxParser>());
         var filePath = GetTestFilePath();
         const int expectedImageCount = 8;
 
