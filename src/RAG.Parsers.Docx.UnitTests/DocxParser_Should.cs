@@ -6,7 +6,24 @@ namespace RAG.Parsers.Docx.UnitTests;
 public class DocxParser_Should
 {
     private const string TestFilesDirectory = "TestFiles";
-    private const string TestFileName = "TestSample.docx";
+    private const string TestFileName = "Sample.docx";
+
+    [TestMethod]
+    public void ConvertWordToMarkdown_WhenOK()
+    {
+        // Arrange
+        using var loggerFactory = LoggerFactory.Create(loggingBuilder => loggingBuilder
+                    .SetMinimumLevel(LogLevel.Trace)
+                    .AddConsole());
+        var parser = new DocxParser(loggerFactory.CreateLogger<DocxParser>());
+        var filePath = GetTestFilePath();
+
+        // Act
+        var result = parser.DocToMarkdownWithContext(filePath);
+
+        // Assert
+        Assert.IsNotNull(result.Output);
+    }
 
     /// <summary>
     /// Constructs the full file path for the test document.
@@ -40,7 +57,7 @@ public class DocxParser_Should
                     .AddConsole());
         var parser = new DocxParser(loggerFactory.CreateLogger<DocxParser>());
         var filePath = GetTestFilePath();
-        const int expectedImageCount = 8;
+        const int expectedImageCount = 2;
 
         // Act
         var result = parser.DocToMarkdownWithContext(filePath);
@@ -81,7 +98,7 @@ public class DocxParser_Should
                     .AddConsole());
         var parser = new DocxParser(loggerFactory.CreateLogger<DocxParser>());
         var filePath = GetTestFilePath();
-        const int expectedImageCount = 8;
+        const int expectedImageCount = 2;
 
         // Act
         var result = parser.DocToMarkdownWithContext(filePath);
