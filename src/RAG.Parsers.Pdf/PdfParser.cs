@@ -11,6 +11,7 @@ using UglyToad.PdfPig.DocumentLayoutAnalysis.TextExtractor;
 using System.IO;
 using RAG.Parsers.Pdf.Models;
 using System.Linq;
+using UglyToad.PdfPig.DocumentLayoutAnalysis.ReadingOrderDetector;
 
 namespace RAG.Parsers.Pdf;
 
@@ -61,19 +62,38 @@ public class PdfParser
             {
                 var page = document.GetPage(i + 1);
 
-                string? text = ContentOrderTextExtractor.GetText(page);
+                var words = page.GetWords(NearestNeighbourWordExtractor.Instance);
+                var images = page.GetImages();
+                var blocks = DocstrumBoundingBoxes.Instance.GetBlocks(words);
+
+                var unsupervisedReadingOrderDetector = new UnsupervisedReadingOrderDetector(10);
+                var orderedBlocks = unsupervisedReadingOrderDetector.Get(blocks);
+
+                string? text = ContentOrderTextExtractor.GetText(page, true);
                 output.AppendLine(text);
 
                 // Extract images :
-                var images = page.GetImages();
                 foreach(var image in images)
                 {
+                    byte[] rawBytes = null;
+                    string extension = "jpg";
+                    if(image.TryGetPng(out rawBytes))
+                        extension = "png";
+                    else
+                        rawBytes = image.RawBytes.ToArray();
+
+                    var id = $"{Guid.NewGuid()}.{extension}";
+
+                    var raw = $"![image](data:image/{extension};{id})";
+                    output.AppendLine(raw);
+
                     result.Images.Add(new ImageRef()
                     {
-                        Id = Guid.NewGuid().ToString(),
-                        RawBytes = image.RawBytes
+                        Id = id,
+                        Format = extension,
+                        MarkdownRaw = raw,
+                        RawBytes = rawBytes
                     });
-                    output.AppendLine($"![image](data:image/png;imageRefId,{result.Images.Last().Id})");
                 }
             }
         }

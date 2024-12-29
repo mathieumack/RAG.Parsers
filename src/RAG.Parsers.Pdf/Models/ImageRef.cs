@@ -12,6 +12,16 @@ public class ImageRef
     public string Id { get; set; }
 
     /// <summary>
+    /// Image format (e,g. png, jpeg, ...)
+    /// </summary>
+    public string Format { get; set; }
+
+    /// <summary>
+    /// Raw content linked to the image
+    /// </summary>
+    public string MarkdownRaw { get; set; }
+
+    /// <summary>
     /// Raw bytes for image
     /// </summary>
     public IReadOnlyList<Byte> RawBytes { get; set; }
