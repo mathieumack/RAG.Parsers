@@ -19,7 +19,11 @@ public class DocxParser_Should
         var filePath = GetTestFilePath();
 
         // Act
-        var result = parser.DocToMarkdownWithContext(filePath);
+        var result = parser.DocToMarkdownWithContext(filePath, new Models.ExtractOptions()
+        {  
+            ExtractTables = true,
+            ExtractImages = true
+        });
 
         // Assert
         Assert.IsNotNull(result.Output);
@@ -60,7 +64,11 @@ public class DocxParser_Should
         const int expectedImageCount = 2;
 
         // Act
-        var result = parser.DocToMarkdownWithContext(filePath);
+        var result = parser.DocToMarkdownWithContext(filePath, new Models.ExtractOptions()
+        {
+            ExtractTables = true,
+            ExtractImages = true
+        });
 
         // Assert
         Assert.IsNotNull(result?.Output, "The output from DocToMarkdownWithContext should not be null.");
@@ -80,7 +88,11 @@ public class DocxParser_Should
         const int expectedJpegCount = 1;
 
         // Act
-        var result = parser.DocToMarkdownWithContext(filePath);
+        var result = parser.DocToMarkdownWithContext(filePath, new Models.ExtractOptions()
+        {
+            ExtractTables = true,
+            ExtractImages = true
+        });
 
         // Assert
         Assert.IsNotNull(result?.Output, "The output from DocToMarkdownWithContext should not be null.");
@@ -101,7 +113,11 @@ public class DocxParser_Should
         const int expectedImageCount = 2;
 
         // Act
-        var result = parser.DocToMarkdownWithContext(filePath);
+        var result = parser.DocToMarkdownWithContext(filePath, new Models.ExtractOptions()
+        {
+            ExtractTables = true,
+            ExtractImages = true
+        });
 
         // Assert
         Assert.IsNotNull(result?.Output, "The output from DocToMarkdownWithContext should not be null.");

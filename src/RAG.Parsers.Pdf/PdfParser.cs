@@ -1,12 +1,8 @@
 ﻿using System.Text;
-using UglyToad.PdfPig.DocumentLayoutAnalysis.Export;
 using UglyToad.PdfPig.DocumentLayoutAnalysis.PageSegmenter;
 using UglyToad.PdfPig;
 using UglyToad.PdfPig.DocumentLayoutAnalysis.WordExtractor;
 using System;
-using static System.Runtime.InteropServices.JavaScript.JSType;
-using System.Collections.Generic;
-using UglyToad.PdfPig.Content;
 using UglyToad.PdfPig.DocumentLayoutAnalysis.TextExtractor;
 using System.IO;
 using RAG.Parsers.Pdf.Models;
@@ -27,13 +23,13 @@ public class PdfParser
     /// </summary>
     /// <param name="filePath"></param>
     /// <returns></returns>
-    public ExtractOutput ToMarkdown(string filePath)
+    public ExtractOutput ToMarkdown(string filePath, ExtractOptions options)
     {
         // Open file
         using var stream = File.OpenRead(filePath);
 
         // Convert file
-        return ToMarkdown(stream);
+        return ToMarkdown(stream, options);
     }
 
     /// <summary>
@@ -41,7 +37,7 @@ public class PdfParser
     /// </summary>
     /// <param name="data"></param>
     /// <returns></returns>
-    public ExtractOutput ToMarkdown(Stream data)
+    public ExtractOutput ToMarkdown(Stream data, ExtractOptions options)
     {
         var result = new ExtractOutput()
         {
@@ -73,27 +69,30 @@ public class PdfParser
                 output.AppendLine(text);
 
                 // Extract images :
-                foreach(var image in images)
+                if (options.ExtractImages)
                 {
-                    byte[] rawBytes = null;
-                    string extension = "jpg";
-                    if(image.TryGetPng(out rawBytes))
-                        extension = "png";
-                    else
-                        rawBytes = image.RawBytes.ToArray();
-
-                    var id = $"{Guid.NewGuid()}.{extension}";
-
-                    var raw = $"![image](data:image/{extension};{id})";
-                    output.AppendLine(raw);
-
-                    result.Images.Add(new ImageRef()
+                    foreach (var image in images)
                     {
-                        Id = id,
-                        Format = extension,
-                        MarkdownRaw = raw,
-                        RawBytes = rawBytes
-                    });
+                        byte[] rawBytes = null;
+                        string extension = "jpg";
+                        if (image.TryGetPng(out rawBytes))
+                            extension = "png";
+                        else
+                            rawBytes = image.RawBytes.ToArray();
+
+                        var id = $"{Guid.NewGuid()}.{extension}";
+
+                        var raw = $"![image](data:image/{extension};{id})";
+                        output.AppendLine(raw);
+
+                        result.Images.Add(new ImageRef()
+                        {
+                            Id = id,
+                            Format = extension,
+                            MarkdownRaw = raw,
+                            RawBytes = rawBytes
+                        });
+                    }
                 }
             }
         }

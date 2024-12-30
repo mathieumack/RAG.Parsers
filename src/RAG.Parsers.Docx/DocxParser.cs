@@ -2,6 +2,7 @@
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 using Microsoft.Extensions.Logging;
+using RAG.Parsers.Docx.Models;
 using RAG.Parsers.Docx.Models.Table;
 using System;
 using System.Collections.Generic;
@@ -30,13 +31,13 @@ public class DocxParser
     /// </summary>
     /// <param name="filePath"></param>
     /// <returns></returns>
-    public ExtractOutput DocToMarkdownWithContext(string filePath)
+    public ExtractOutput DocToMarkdownWithContext(string filePath, ExtractOptions options)
     {
         // Open file
         using var stream = File.OpenRead(filePath);
 
         // Convert file
-        return DocToMarkdownWithContext(stream);
+        return DocToMarkdownWithContext(stream, options);
     }
 
     #endregion
@@ -51,7 +52,7 @@ public class DocxParser
     /// <param name="data"></param>
     /// <returns></returns>
     /// <exception cref="InvalidOperationException"></exception>
-    public ExtractOutput DocToMarkdownWithContext(Stream data)
+    public ExtractOutput DocToMarkdownWithContext(Stream data, ExtractOptions options)
     {
         // Get file from stream
         var context = new ExtractOutput()
@@ -83,8 +84,8 @@ public class DocxParser
                 {
                     if (node is Paragraph paragraph)
                         // Process Text and paragraph
-                        ProcessParagraph(mainPart, paragraph, context, ref sb);
-                    else if (node is Table table)
+                        ProcessParagraph(mainPart, paragraph, context, options, ref sb);
+                    else if (node is Table table && options.ExtractTables)
                         // Process Table
                         ProcessTable(mainPart, table, context, ref sb);
                 }
@@ -115,6 +116,7 @@ public class DocxParser
     private void ProcessParagraph(MainDocumentPart mainPart, 
                                   Paragraph paragraph, 
                                   ExtractOutput context,
+                                  ExtractOptions options,
                                   ref StringBuilder sb)
     {
         var stringToAdd = "";
@@ -149,10 +151,13 @@ public class DocxParser
             sb.AppendLine(stringToAdd);
 
         // Now add drawing elements on ths paragraph:
-        foreach (var drawing in paragraph.Descendants<Drawing>())
+        if (options.ExtractImages)
         {
-            ProcessDrawing(drawing, mainPart, context, ref sb);
-            sb.AppendLine();
+            foreach (var drawing in paragraph.Descendants<Drawing>())
+            {
+                ProcessDrawing(drawing, mainPart, context, ref sb);
+                sb.AppendLine();
+            }
         }
     }
 
