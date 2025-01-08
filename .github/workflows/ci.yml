@@ -15,12 +15,12 @@ on:
 
 jobs:
   dotnet:
-    uses: mathieumack/MyGithubActions/.github/workflows/dotnetlib.yml@feature/v2
+    uses: mathieumack/MyGithubActions/.github/workflows/dotnetlib.yml@main
     with:
-      publishToNuget: false
+      publishToNuget: ${{ github.event.inputs.publishToNuget == true }}
+      dotnet-version: |
+        8.0.x
+        9.0.x
     secrets:
       NUGETPACKAGEIDENTIFIER: ${{ secrets.NUGETPACKAGEIDENTIFIER }}
       NUGETAPIKEY: ${{ secrets.NUGETAPIKEY }}
-      SONAR_ORGANIZATION_CODE: ${{ secrets.SONAR_ORGANIZATION_CODE }}
-      SONAR_PROJECT_CODE: ${{ secrets.SONAR_PROJECT_CODE }}
-      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
