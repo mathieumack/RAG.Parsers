@@ -8,6 +8,7 @@ using System.IO;
 using RAG.Parsers.Pdf.Models;
 using System.Linq;
 using UglyToad.PdfPig.DocumentLayoutAnalysis.ReadingOrderDetector;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace RAG.Parsers.Pdf;
 
@@ -59,32 +60,49 @@ public class PdfParser
                 var page = document.GetPage(i + 1);
 
                 var words = page.GetWords(NearestNeighbourWordExtractor.Instance);
-                var images = page.GetImages();
+                var images = options.ExtractImages ? page.GetImages().ToList() : new();
                 var blocks = DocstrumBoundingBoxes.Instance.GetBlocks(words);
 
                 var unsupervisedReadingOrderDetector = new UnsupervisedReadingOrderDetector(10);
                 var orderedBlocks = unsupervisedReadingOrderDetector.Get(blocks);
 
-                string? text = ContentOrderTextExtractor.GetText(page, true);
-                output.AppendLine(text);
-
-                // Extract images :
-                if (options.ExtractImages)
+                // Now for each bloc, we can extract the text and link images that are really next to it :
+                foreach (var block in orderedBlocks)
                 {
-                    foreach (var image in images)
+                    output.AppendLine(block.Text);
+                    // Search for images next to the block :
+                    // Images coordonnates :
+                    //image.Bounds.TopLeft.X;
+                    //image.Bounds.TopLeft.Y;
+                    //image.Bounds.TopRight.X;
+                    //image.Bounds.TopRight.Y;
+
+                    // text block coordonnates :
+                    //block.BoundingBox.TopLeft.X;
+                    //block.BoundingBox.TopLeft.Y;
+                    //block.BoundingBox.TopRight.X;
+                    //block.BoundingBox.TopRight.Y;
+
+                    // Find image that is near text block :
+                    var nearImage = images.FirstOrDefault(x =>
+                    {
+                        var imageX = x.Bounds.TopLeft.X;
+                        var imageY = x.Bounds.TopLeft.Y;
+                        var blockX = block.BoundingBox.TopLeft.X;
+                        var blockY = block.BoundingBox.TopLeft.Y;
+                        return Math.Abs(imageX - blockX) < 100 && Math.Abs(imageY - blockY) < 100;
+                    });
+                    if (nearImage != null)
                     {
                         byte[] rawBytes = null;
                         string extension = "jpg";
-                        if (image.TryGetPng(out rawBytes))
+                        if (nearImage.TryGetPng(out rawBytes))
                             extension = "png";
                         else
-                            rawBytes = image.RawBytes.ToArray();
-
+                            rawBytes = nearImage.RawBytes.ToArray();
                         var id = $"{Guid.NewGuid()}.{extension}";
-
                         var raw = $"![image](data:image/{extension};{id})";
                         output.AppendLine(raw);
-
                         result.Images.Add(new ImageRef()
                         {
                             Id = id,
@@ -92,6 +110,9 @@ public class PdfParser
                             MarkdownRaw = raw,
                             RawBytes = rawBytes
                         });
+
+                        // Delete image from list to avoid duplicates :
+                        images.Remove(nearImage);
                     }
                 }
             }
