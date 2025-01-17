@@ -9,7 +9,7 @@ public class DocxParser_Should
     private const string TestFileName = "Sample.docx";
 
     [TestMethod]
-    public void ConvertWordToMarkdown_WhenOK()
+    public void ConvertWordToMarkdown_WhenOK() 
     {
         // Arrange
         using var loggerFactory = LoggerFactory.Create(loggingBuilder => loggingBuilder
