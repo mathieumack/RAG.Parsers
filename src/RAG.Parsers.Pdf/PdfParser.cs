@@ -115,6 +115,27 @@ public class PdfParser
                         images.Remove(nearImage);
                     }
                 }
+
+                // Now add other images that are not near text :
+                foreach (var image in images)
+                {
+                    byte[] rawBytes = null;
+                    string extension = "jpg";
+                    if (image.TryGetPng(out rawBytes))
+                        extension = "png";
+                    else
+                        rawBytes = image.RawBytes.ToArray();
+                    var id = $"{Guid.NewGuid()}.{extension}";
+                    var raw = $"![image](data:image/{extension};{id})";
+                    output.AppendLine(raw);
+                    result.Images.Add(new ImageRef()
+                    {
+                        Id = id,
+                        Format = extension,
+                        MarkdownRaw = raw,
+                        RawBytes = rawBytes
+                    });
+                }
             }
         }
 
