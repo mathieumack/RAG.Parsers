@@ -20,7 +20,7 @@ public class PdfParser
 {
     #region Constants
 
-    private const double VERTICAL_THRESHOLD = 40;
+    private const double VERTICAL_THRESHOLD = 80;
 
     #endregion
 
