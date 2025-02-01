@@ -16,7 +16,7 @@ namespace RAG.Parsers.Pdf;
 /// <summary>
 /// Docx Decoder to Markdown
 /// </summary>
-public class PdfParser
+public class PdfParser 
 {
     #region Constants
 
