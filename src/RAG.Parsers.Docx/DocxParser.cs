@@ -170,7 +170,7 @@ public class DocxParser
     /// <param name="sb">The StringBuilder to append the image reference to.</param>
     private void ProcessDrawing(Drawing drawing, MainDocumentPart mainPart, ExtractOutput context, ref StringBuilder sb)
     {
-        if (!TryGetImagePart(drawing, mainPart, out var imagePart, out var imageUri, out var imageFormat))
+        if (!TryGetImagePart(drawing, mainPart, out var imagePart, out var imageUri, out var imageFormat, out var imageWidth, out var imageHeight))
         {
             logger.LogInformation("DocxParser-No image part found for the given drawing.");
 
@@ -191,7 +191,9 @@ public class DocxParser
                 Id = id,
                 Format = imageFormat,
                 MarkdownRaw = raw,
-                RawBytes = imageBytes
+                RawBytes = imageBytes,
+                Width = imageWidth,
+                Height = imageHeight
             });
         }
         catch (Exception ex)
@@ -710,12 +712,16 @@ public class DocxParser
     /// <param name="imagePart">The image part.</param>
     /// <param name="imageUri">The image URI.</param>
     /// <param name="imageFormat">The image format.</param>
+    /// <param name="imageWidth">The image width.</param>
+    /// <param name="imageHeight">The image height.</param>
     /// <returns>True if the image part is found; otherwise, false.</returns>
-    bool TryGetImagePart(Drawing drawing, MainDocumentPart mainPart, out ImagePart imagePart, out string imageUri, out string imageFormat)
+    bool TryGetImagePart(Drawing drawing, MainDocumentPart mainPart, out ImagePart imagePart, out string imageUri, out string imageFormat, out double imageWidth, out double imageHeight)
     {
         imagePart = null;
         imageUri = null;
         imageFormat = null;
+        imageWidth = 0;
+        imageHeight = 0;
 
         var graphic = drawing.Inline?.Graphic ?? drawing.Anchor.Descendants<DocumentFormat.OpenXml.Drawing.Graphic>().FirstOrDefault();
         var image = graphic?.GraphicData?.GetFirstChild<DocumentFormat.OpenXml.Drawing.Pictures.Picture>();
@@ -730,6 +736,15 @@ public class DocxParser
         imagePart = mainPart.GetPartById(imageUri) as ImagePart;
         if (imagePart == null)
             return false;
+
+        //Get width and height
+        var extent = drawing.Inline.Extent;
+        var cx = extent.Cx;
+        var cy = extent.Cy;
+
+        // Convert EMUs to pixels (1 EMU = 1/914400 inches, 1 inch = 96 pixels)
+        imageWidth = cx / 914400.0 * 96;
+        imageHeight = cy / 914400.0 * 96;
 
         imageFormat = GetImageFormat(imagePart);
 

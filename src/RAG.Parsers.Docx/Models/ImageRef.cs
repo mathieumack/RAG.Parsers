@@ -24,4 +24,15 @@ public class ImageRef
     /// Raw bytes for image
     /// </summary>
     public IReadOnlyList<Byte> RawBytes { get; set; }
+
+    /// <summary>
+    /// Image width in pixels
+    /// </summary>
+    public double Width { get; set; }
+
+    /// <summary>
+    /// Image height in pixels
+    /// </summary>
+    public double Height { get; set; }
+
 }

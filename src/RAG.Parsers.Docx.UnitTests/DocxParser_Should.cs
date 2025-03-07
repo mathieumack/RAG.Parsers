@@ -61,7 +61,7 @@ public class DocxParser_Should
                     .AddConsole());
         var parser = new DocxParser(loggerFactory.CreateLogger<DocxParser>());
         var filePath = GetTestFilePath();
-        const int expectedImageCount = 2;
+        const int expectedImageCount = 5; // 1 jpeg, 2 png and 2 svg identfied as png
 
         // Act
         var result = parser.DocToMarkdownWithContext(filePath, new Models.ExtractOptions()
@@ -110,7 +110,7 @@ public class DocxParser_Should
                     .AddConsole());
         var parser = new DocxParser(loggerFactory.CreateLogger<DocxParser>());
         var filePath = GetTestFilePath();
-        const int expectedImageCount = 2;
+        const int expectedImageCount = 5; // 1 jpeg, 2 png and 2 svg identfied as png
 
         // Act
         var result = parser.DocToMarkdownWithContext(filePath, new Models.ExtractOptions()
