@@ -18,6 +18,7 @@ public class PdfParser_Should
         var result = parser.ToMarkdown(filePath, new ExtractOptions()
         {
             ExtractTables = true,
+            ExtractPageImages = true,
             ExtractImages = true
         });
 

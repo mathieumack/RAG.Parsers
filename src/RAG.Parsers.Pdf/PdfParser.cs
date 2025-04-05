@@ -10,6 +10,8 @@ using UglyToad.PdfPig.DocumentLayoutAnalysis.ReadingOrderDetector;
 using System.Collections.Generic;
 using UglyToad.PdfPig.Content;
 using UglyToad.PdfPig.DocumentLayoutAnalysis;
+using UglyToad.PdfPig.Rendering.Skia;
+using UglyToad.PdfPig.Graphics.Colors;
 
 namespace RAG.Parsers.Pdf;
 
@@ -53,6 +55,9 @@ public class PdfParser
 
         using (var document = PdfDocument.Open(data))
         {
+            if(options.ExtractPageImages)
+                document.AddSkiaPageFactory();
+
             ProcessDocument(document, options, output, result);
         }
 
@@ -69,6 +74,7 @@ public class PdfParser
         return new ExtractOutput
         {
             Images = new List<ImageRef>(),
+            Pages = new List<PageRef>(),
             Output = string.Empty
         };
     }
@@ -86,7 +92,7 @@ public class PdfParser
         {
             var page = document.GetPage(i + 1);
 
-            ProcessPage(page, options, output, result);
+            ProcessPage(document, page, options, output, result);
         }
     }
 
@@ -97,7 +103,7 @@ public class PdfParser
     /// <param name="options">The extraction options.</param>
     /// <param name="output">The StringBuilder to store the extracted content.</param>
     /// <param name="result">The ExtractOutput object to store the result.</param>
-    private void ProcessPage(Page page, ExtractOptions options, StringBuilder output, ExtractOutput result)
+    private void ProcessPage(PdfDocument document, Page page, ExtractOptions options, StringBuilder output, ExtractOutput result)
     {
         var words = page.GetWords(NearestNeighbourWordExtractor.Instance);
         var images = options.ExtractImages ? page.GetImages().ToList() : new();
@@ -108,6 +114,41 @@ public class PdfParser
 
         ProcessBlocks(orderedBlocks, images, output, result);
         ProcessRemainingImages(images, page, currentPageIndex, output, result);
+        ProcessPageImage(document, page.Number, options, output, result);
+    }
+
+    private void ProcessPageImage(PdfDocument document, int pageNumber, ExtractOptions options, StringBuilder output, ExtractOutput result)
+    {
+        if (options.ExtractPageImages)
+        {
+            using (var ms = document.GetPageAsPng(pageNumber, 1, RGBColor.White))
+            {
+                var pageRef = CreatePageRef(pageNumber, ms.ToArray(), "png");
+                result.Pages.Add(pageRef);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Creates an image reference from the raw bytes and extension of an image.
+    /// </summary>
+    /// <param name="pageNumber"></param>
+    /// <param name="rawBytes">The raw bytes of the image.</param>
+    /// <param name="extension">The extension of the image.</param>
+    /// <returns>An ImageRef object containing the image reference.</returns>
+    private PageRef CreatePageRef(int pageNumber, byte[] rawBytes, string extension)
+    {
+        var id = $"{Guid.NewGuid()}.{extension}";
+        var raw = $"![image](data:image/{extension};{id})";
+
+        return new PageRef
+        {
+            Id = id,
+            Format = extension,
+            MarkdownRaw = raw,
+            RawBytes = rawBytes,
+            PageNumber = pageNumber
+        };
     }
 
     /// <summary>
