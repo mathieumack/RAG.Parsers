@@ -125,6 +125,9 @@ public class PdfParser
             {
                 var pageRef = CreatePageRef(pageNumber, ms.ToArray(), "png");
                 result.Pages.Add(pageRef);
+
+                //output.AppendLine($"Page {pageNumber} image view :");
+                output.AppendLine(pageRef.MarkdownRaw);
             }
         }
     }
