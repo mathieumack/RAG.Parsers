@@ -12,6 +12,7 @@ using UglyToad.PdfPig.Content;
 using UglyToad.PdfPig.DocumentLayoutAnalysis;
 using UglyToad.PdfPig.Rendering.Skia;
 using UglyToad.PdfPig.Graphics.Colors;
+using Microsoft.Extensions.Logging;
 
 namespace RAG.Parsers.Pdf;
 
@@ -25,6 +26,13 @@ public class PdfParser
     private const double VERTICAL_THRESHOLD = 80;
 
     #endregion
+
+    private readonly ILogger<PdfParser> logger;
+
+    public PdfParser(ILogger<PdfParser> logger)
+    {
+        this.logger = logger;
+    }
 
     #region Public Methods
 

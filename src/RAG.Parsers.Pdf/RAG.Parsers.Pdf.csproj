@@ -26,6 +26,6 @@
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.3" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.3" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.3" />
-		<PackageReference Include="PdfPig.Rendering.Skia" Version="0.1.10.2" />
+		<PackageReference Include="PdfPig.Rendering.Skia" Version="0.1.11.1-alpha002" />
 	</ItemGroup>
 </Project>
