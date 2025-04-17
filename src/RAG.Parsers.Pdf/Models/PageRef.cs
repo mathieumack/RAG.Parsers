@@ -24,9 +24,4 @@ public class PageRef
     /// Raw content linked to the image that represents the page
     /// </summary>
     public string MarkdownRaw { get; set; }
-
-    /// <summary>
-    /// Raw bytes for image
-    /// </summary>
-    public IReadOnlyList<Byte> RawBytes { get; set; }
 }
