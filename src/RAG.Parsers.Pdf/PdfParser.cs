@@ -404,11 +404,14 @@ public class PdfParser : IDisposable
 
     public void Dispose()
     {
-        if(pdfDocument != null)
+        if (pdfDocument != null)
         {
             pdfDocument.Dispose();
             pdfDocument = null;
         }
+
+        // Suppress finalization to adhere to CA1816  
+        GC.SuppressFinalize(this);
     }
 
     #endregion

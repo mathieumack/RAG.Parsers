@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <ProjectGuid>{F460939B-1C6B-46A0-B973-7DDBEA7EAAFA}</ProjectGuid>
-    <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
+    <TargetFrameworks>net9.0</TargetFrameworks>
     <Preview>true</Preview>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <LangVersion>preview</LangVersion>

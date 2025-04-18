@@ -15,7 +15,7 @@ namespace RAG.Parsers.Docx;
 /// <summary>
 /// Docx Decoder to Markdown
 /// </summary>
-public class DocxParser
+public class DocxParser : IDisposable
 {
     private readonly ILogger<DocxParser> logger;
 
@@ -753,4 +753,10 @@ public class DocxParser
     #endregion
 
     #endregion
+
+    public void Dispose()
+    {
+        // Nothing to release
+        GC.SuppressFinalize(this);
+    }
 }

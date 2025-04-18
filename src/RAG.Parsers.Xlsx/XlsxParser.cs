@@ -1,16 +1,16 @@
-﻿using System;
+﻿using ClosedXML.Excel;
+using System;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
-using ClosedXML.Excel;
 
 namespace RAG.Parsers.Xlsx;
 
 /// <summary>
 /// Excel Decoder to Markdown
 /// </summary>
-public class XlsxParser()
+public class XlsxParser : IDisposable
 {
     #region Public Methods
 
@@ -125,4 +125,10 @@ public class XlsxParser()
     }
 
     #endregion
+
+    public void Dispose()
+    {
+        // Nothing to release in this version.
+        GC.SuppressFinalize(this);
+    }
 }
