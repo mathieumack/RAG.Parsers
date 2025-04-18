@@ -30,6 +30,7 @@ public class PdfParser : IDisposable
     #endregion
 
     private readonly ILogger<PdfParser> logger;
+    private Stream sourceStream;
     private PdfDocument pdfDocument;
     private readonly Dictionary<string, IPdfImage> imageRefs = new();
     private readonly Dictionary<string, PageRef> pageRefs = new();
@@ -49,10 +50,10 @@ public class PdfParser : IDisposable
     public ExtractOutput ToMarkdown(string filePath, ExtractOptions options)
     {
         // Open file
-        using var stream = File.OpenRead(filePath);
+        sourceStream = File.OpenRead(filePath);
 
         // Convert file
-        return ToMarkdown(stream, options);
+        return ToMarkdown(sourceStream, options);
     }
 
     /// <summary>
@@ -67,7 +68,12 @@ public class PdfParser : IDisposable
         var output = new StringBuilder();
 
         // Clear old reference to old document
-        if(pdfDocument != null)
+        if (sourceStream != null)
+        {
+            sourceStream.Dispose();
+            sourceStream = null;
+        }
+        if (pdfDocument != null)
         {
             pdfDocument.Dispose();
             pdfDocument = null;
@@ -135,22 +141,19 @@ public class PdfParser : IDisposable
 
         ProcessBlocks(orderedBlocks, images, output, result);
         ProcessRemainingImages(images, page, currentPageIndex, output, result);
-        ProcessPageImage(document, page.Number, options, output, result);
+        ProcessPage(document, page.Number, options, output, result);
     }
 
-    private void ProcessPageImage(PdfDocument document, int pageNumber, ExtractOptions options, StringBuilder output, ExtractOutput result)
+    private void ProcessPage(PdfDocument document, int pageNumber, ExtractOptions options, StringBuilder output, ExtractOutput result)
     {
         if (options.ExtractPageImages)
         {
-            using (var ms = document.GetPageAsPng(pageNumber, 1, RGBColor.White))
-            {
-                var pageRef = CreatePageRef(pageNumber, "png");
-                result.Pages.Add(pageRef);
-                pageRefs.Add(pageRef.Id, pageRef);
+            var pageRef = CreatePageRef(pageNumber, "png");
+            result.Pages.Add(pageRef);
+            pageRefs.Add(pageRef.Id, pageRef);
 
-                //output.AppendLine($"Page {pageNumber} image view :");
-                output.AppendLine(pageRef.MarkdownRaw);
-            }
+            //output.AppendLine($"Page {pageNumber} image view :");
+            output.AppendLine(pageRef.MarkdownRaw);
         }
     }
 
@@ -404,6 +407,11 @@ public class PdfParser : IDisposable
 
     public void Dispose()
     {
+        if (sourceStream != null)
+        {
+            sourceStream.Dispose();
+            sourceStream = null;
+        }
         if (pdfDocument != null)
         {
             pdfDocument.Dispose();
