@@ -303,7 +303,7 @@ public class PdfParser : IDisposable
             && array[4] == 0x0d
             && array[5] == 0x0a
             && array[6] == 0x1a
-            && array[7] == 0x0a
+            && array[7] == 0x0a;
 }
 
     private bool IsJpeg(ReadOnlySpan<byte> array)
