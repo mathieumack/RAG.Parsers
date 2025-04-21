@@ -292,6 +292,28 @@ public class PdfParser : IDisposable
         };
     }
 
+    private bool IsPng(ReadOnlySpan<byte> array)
+    {
+        return array != null
+            && array.Length > 8
+            && array[0] == 0x89
+            && array[1] == 0x50
+            && array[2] == 0x4e
+            && array[3] == 0x47
+            && array[4] == 0x0d
+            && array[5] == 0x0a
+            && array[6] == 0x1a
+            && array[7] == 0x0a
+}
+
+    private bool IsJpeg(ReadOnlySpan<byte> array)
+    {
+        return array != null
+            && array.Length > 2
+            && array[0] == 0xff
+            && array[1] == 0xd8;
+    }
+
     /// <summary>
     /// Gets a 
     /// </summary>
@@ -321,12 +343,17 @@ public class PdfParser : IDisposable
     /// <returns>An ImageRef object containing the image reference.</returns>
     private ImageRef CreateImageReference(IPdfImage image)
     {
+        var format = "jpg";
+        if (IsPng(image.RawBytes))
+            format = "png";
+
         var id = Guid.NewGuid().ToString();
-        var raw = $"![image](data:image/jpg;{id})";
+        var raw = $"![image](data:image/jpg;{id}.{format})";
 
         var result = new ImageRef
         {
             Id = id,
+            Format = format,
             MarkdownRaw = raw
         };
 
