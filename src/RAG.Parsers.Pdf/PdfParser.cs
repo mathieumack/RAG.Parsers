@@ -10,19 +10,35 @@ using UglyToad.PdfPig.DocumentLayoutAnalysis.ReadingOrderDetector;
 using System.Collections.Generic;
 using UglyToad.PdfPig.Content;
 using UglyToad.PdfPig.DocumentLayoutAnalysis;
+using UglyToad.PdfPig.Rendering.Skia;
+using UglyToad.PdfPig.Graphics.Colors;
+using Microsoft.Extensions.Logging;
+using static SkiaSharp.HarfBuzz.SKShaper;
+using System.Reflection.Metadata;
 
 namespace RAG.Parsers.Pdf;
 
 /// <summary>
-/// Docx Decoder to Markdown
+/// Pdf class for read document
 /// </summary>
-public class PdfParser 
+public class PdfParser : IDisposable
 {
     #region Constants
 
     private const double VERTICAL_THRESHOLD = 80;
 
     #endregion
+
+    private readonly ILogger<PdfParser> logger;
+    private Stream sourceStream;
+    private PdfDocument pdfDocument;
+    private readonly Dictionary<string, IPdfImage> imageRefs = new();
+    private readonly Dictionary<string, PageRef> pageRefs = new();
+
+    public PdfParser(ILogger<PdfParser> logger)
+    {
+        this.logger = logger;
+    }
 
     #region Public Methods
 
@@ -34,10 +50,10 @@ public class PdfParser
     public ExtractOutput ToMarkdown(string filePath, ExtractOptions options)
     {
         // Open file
-        using var stream = File.OpenRead(filePath);
+        sourceStream = File.OpenRead(filePath);
 
         // Convert file
-        return ToMarkdown(stream, options);
+        return ToMarkdown(sourceStream, options);
     }
 
     /// <summary>
@@ -51,10 +67,26 @@ public class PdfParser
         var result = InitializeExtractOutput();
         var output = new StringBuilder();
 
-        using (var document = PdfDocument.Open(data))
+        // Clear old reference to old document
+        if (sourceStream != null)
         {
-            ProcessDocument(document, options, output, result);
+            sourceStream.Dispose();
+            sourceStream = null;
         }
+        if (pdfDocument != null)
+        {
+            pdfDocument.Dispose();
+            pdfDocument = null;
+        }
+
+        imageRefs.Clear();
+        pageRefs.Clear();
+
+        pdfDocument = PdfDocument.Open(data);
+        if(options.ExtractPageImages)
+            pdfDocument.AddSkiaPageFactory();
+
+        ProcessDocument(pdfDocument, options, output, result);
 
         result.Output = output.ToString();
 
@@ -69,6 +101,7 @@ public class PdfParser
         return new ExtractOutput
         {
             Images = new List<ImageRef>(),
+            Pages = new List<PageRef>(),
             Output = string.Empty
         };
     }
@@ -86,7 +119,7 @@ public class PdfParser
         {
             var page = document.GetPage(i + 1);
 
-            ProcessPage(page, options, output, result);
+            ProcessPage(document, page, options, output, result);
         }
     }
 
@@ -97,7 +130,7 @@ public class PdfParser
     /// <param name="options">The extraction options.</param>
     /// <param name="output">The StringBuilder to store the extracted content.</param>
     /// <param name="result">The ExtractOutput object to store the result.</param>
-    private void ProcessPage(Page page, ExtractOptions options, StringBuilder output, ExtractOutput result)
+    private void ProcessPage(PdfDocument document, Page page, ExtractOptions options, StringBuilder output, ExtractOutput result)
     {
         var words = page.GetWords(NearestNeighbourWordExtractor.Instance);
         var images = options.ExtractImages ? page.GetImages().ToList() : new();
@@ -108,6 +141,41 @@ public class PdfParser
 
         ProcessBlocks(orderedBlocks, images, output, result);
         ProcessRemainingImages(images, page, currentPageIndex, output, result);
+        ProcessPage(document, page.Number, options, output, result);
+    }
+
+    private void ProcessPage(PdfDocument document, int pageNumber, ExtractOptions options, StringBuilder output, ExtractOutput result)
+    {
+        if (options.ExtractPageImages)
+        {
+            var pageRef = CreatePageRef(pageNumber, "png");
+            result.Pages.Add(pageRef);
+            pageRefs.Add(pageRef.Id, pageRef);
+
+            //output.AppendLine($"Page {pageNumber} image view :");
+            output.AppendLine(pageRef.MarkdownRaw);
+        }
+    }
+
+    /// <summary>
+    /// Creates an image reference from the raw bytes and extension of an image.
+    /// </summary>
+    /// <param name="pageNumber"></param>
+    /// <param name="rawBytes">The raw bytes of the image.</param>
+    /// <param name="extension">The extension of the image.</param>
+    /// <returns>An ImageRef object containing the image reference.</returns>
+    private PageRef CreatePageRef(int pageNumber, string extension)
+    {
+        var id = $"{Guid.NewGuid()}.{extension}";
+        var raw = $"![image](data:image/{extension};{id})";
+
+        return new PageRef
+        {
+            Id = id,
+            Format = extension,
+            MarkdownRaw = raw,
+            PageNumber = pageNumber
+        };
     }
 
     /// <summary>
@@ -160,8 +228,7 @@ public class PdfParser
     {
         foreach (var image in images)
         {
-            var (rawBytes, extension) = GetImageBytesAndExtension(image);
-            var imageRef = CreateImageReference(rawBytes, extension);
+            var imageRef = CreateImageReference(image);
 
             output.AppendLine(imageRef.MarkdownRaw);
             result.Images.Add(imageRef);
@@ -180,8 +247,7 @@ public class PdfParser
     {
         foreach (var image in images)
         {
-            var (rawBytes, extension) = GetImageBytesAndExtension(image);
-            var imageRef = CreateImageReference(rawBytes, extension);
+            var imageRef = CreateImageReference(image);
 
             if (image.Bounds.Bottom > page.Height / 2)
             {
@@ -199,13 +265,17 @@ public class PdfParser
     /// <summary>
     /// Gets the raw bytes and extension of an image.
     /// </summary>
-    /// <param name="image">The image to process.</param>
+    /// <param name="id">The image id to process based on ImageRef object.</param>
     /// <returns>A tuple containing the raw bytes and extension of the image.</returns>
-    private (byte[] rawBytes, string extension) GetImageBytesAndExtension(IPdfImage image)
+    public EntryRefContent GetImageBytesAndExtension(string id)
     {
+        if (id is null || !imageRefs.ContainsKey(id))
+            return null;
+
         byte[] rawBytes = null;
         string extension = "jpg";
 
+        var image = imageRefs[id];
         if (image.TryGetPng(out rawBytes))
         {
             extension = "png";
@@ -215,7 +285,54 @@ public class PdfParser
             rawBytes = image.RawBytes.ToArray();
         }
 
-        return (rawBytes, extension);
+        return new EntryRefContent()
+        {
+            Extension = extension,
+            RawBytes = rawBytes
+        };
+    }
+
+    private bool IsPng(ReadOnlySpan<byte> array)
+    {
+        return array != null
+            && array.Length > 8
+            && array[0] == 0x89
+            && array[1] == 0x50
+            && array[2] == 0x4e
+            && array[3] == 0x47
+            && array[4] == 0x0d
+            && array[5] == 0x0a
+            && array[6] == 0x1a
+            && array[7] == 0x0a;
+}
+
+    private bool IsJpeg(ReadOnlySpan<byte> array)
+    {
+        return array != null
+            && array.Length > 2
+            && array[0] == 0xff
+            && array[1] == 0xd8;
+    }
+
+    /// <summary>
+    /// Gets a 
+    /// </summary>
+    /// <param name="id"></param>
+    /// <returns></returns>
+    public EntryRefContent GetPageImageBytesandExtension(string id)
+    {
+        if(pdfDocument is null && string.IsNullOrWhiteSpace(id) && !pageRefs.ContainsKey(id))
+            return null;
+
+        var page = pageRefs[id];
+        using (var ms = pdfDocument.GetPageAsPng(page.PageNumber, 1, RGBColor.White))
+        {
+            return new EntryRefContent()
+            {
+                Extension = "png",
+                RawBytes = ms.ToArray()
+            };
+        }
     }
 
     /// <summary>
@@ -224,18 +341,25 @@ public class PdfParser
     /// <param name="rawBytes">The raw bytes of the image.</param>
     /// <param name="extension">The extension of the image.</param>
     /// <returns>An ImageRef object containing the image reference.</returns>
-    private ImageRef CreateImageReference(byte[] rawBytes, string extension)
+    private ImageRef CreateImageReference(IPdfImage image)
     {
-        var id = $"{Guid.NewGuid()}.{extension}";
-        var raw = $"![image](data:image/{extension};{id})";
+        var format = "jpg";
+        if (IsPng(image.RawBytes))
+            format = "png";
 
-        return new ImageRef
+        var id = Guid.NewGuid().ToString();
+        var raw = $"![image](data:image/jpg;{id}.{format})";
+
+        var result = new ImageRef
         {
             Id = id,
-            Format = extension,
-            MarkdownRaw = raw,
-            RawBytes = rawBytes
+            Format = format,
+            MarkdownRaw = raw
         };
+
+        imageRefs.Add(result.Id, image);
+
+        return result;
     }
 
     /// <summary>
@@ -306,6 +430,23 @@ public class PdfParser
         var isRight = image.Bounds.BottomLeft.X >= block.BoundingBox.BottomRight.X && hasVerticalOverlap;
 
         return isBelow || isLeft || isRight;
+    }
+
+    public void Dispose()
+    {
+        if (sourceStream != null)
+        {
+            sourceStream.Dispose();
+            sourceStream = null;
+        }
+        if (pdfDocument != null)
+        {
+            pdfDocument.Dispose();
+            pdfDocument = null;
+        }
+
+        // Suppress finalization to adhere to CA1816  
+        GC.SuppressFinalize(this);
     }
 
     #endregion

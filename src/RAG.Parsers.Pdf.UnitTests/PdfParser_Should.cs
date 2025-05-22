@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using RAG.Parsers.Pdf.Models;
 
 namespace RAG.Parsers.Pdf.UnitTests;
@@ -11,13 +12,17 @@ public class PdfParser_Should
     public void ConvertWordToMarkdown_WhenOK(string documentPath)
     {
         // Arrange
-        var parser = new PdfParser();
+        using var loggerFactory = LoggerFactory.Create(loggingBuilder => loggingBuilder
+                    .SetMinimumLevel(LogLevel.Trace)
+                    .AddConsole());
+        var parser = new PdfParser(loggerFactory.CreateLogger<PdfParser>());
         var filePath = Path.Combine(Environment.CurrentDirectory, documentPath);
 
         // Act
         var result = parser.ToMarkdown(filePath, new ExtractOptions()
         {
             ExtractTables = true,
+            ExtractPageImages = true,
             ExtractImages = true
         });
 

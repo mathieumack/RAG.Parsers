@@ -9,6 +9,11 @@ public class ExtractOptions
     public bool ExtractImages { get; set; } = false;
 
     /// <summary>
+    /// Extract the pages as images
+    /// </summary>
+    public bool ExtractPageImages { get; set; } = false;
+
+    /// <summary>
     /// Extracts the tables from the document
     /// </summary>
     /// <value>true</value>
