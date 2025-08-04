@@ -74,9 +74,7 @@ public class DocxParser : IDisposable
             Body? body = mainPart.Document.Body ??
                 throw new InvalidOperationException("The document body is missing.");
 
-            // Get CommentsPart
-            var commentsPart = mainPart.GetPartsOfType<WordprocessingCommentsPart>().FirstOrDefault();
-            var comments = commentsPart?.Comments?.Elements<Comment>().ToList() ?? new List<Comment>();
+            // Get Hyperlinks and Styles
 
             // Explore file
             var parts = mainPart.Document.Descendants().FirstOrDefault();
@@ -86,7 +84,7 @@ public class DocxParser : IDisposable
                 {
                     if (node is Paragraph paragraph)
                         // Process Text and paragraph
-                        ProcessParagraph(mainPart, paragraph, context, options, ref sb, comments);
+                        ProcessParagraph(mainPart, paragraph, context, options, ref sb);
                     else if (node is Table table && options.ExtractTables)
                         // Process Table
                         ProcessTable(mainPart, table, context, ref sb);
@@ -119,8 +117,7 @@ public class DocxParser : IDisposable
                                   Paragraph paragraph, 
                                   ExtractOutput context,
                                   ExtractOptions options,
-                                  ref StringBuilder sb,
-                                  List<Comment> comments)
+                                  ref StringBuilder sb)
     {
         var stringToAdd = "";
 
@@ -152,28 +149,6 @@ public class DocxParser : IDisposable
 
         if (!string.IsNullOrEmpty(stringToAdd))
             sb.AppendLine(stringToAdd);
-
-        // Regroupement et rendu des commentaires pour ce paragraphe
-        if (options.ExtractComments)
-        {
-            var commentRangeStarts = paragraph.Descendants<CommentRangeStart>().ToList();
-            if (commentRangeStarts.Count > 0)
-            {
-                sb.AppendLine("> Comments about previous text :");
-                for (int i = 0; i < commentRangeStarts.Count; i++)
-                {
-                    var commentRangeStart = commentRangeStarts[i];
-                    var commentId = commentRangeStart.Id.Value;
-                    var comment = comments.FirstOrDefault(c => c.Id.Value == commentId);
-                    if (comment != null)
-                    {
-                        string dateStr = comment.Date != null ? comment.Date.Value.ToString("yyyy-MM-dd HH:mm") : "";
-                        string lineEnd = (i < commentRangeStarts.Count - 1) ? "  " : "";
-                        sb.AppendLine($"> {comment.Author.Value} ({dateStr}) : {comment.InnerText.Trim()}{lineEnd}");
-                    }
-                }
-            }
-        }
 
         // Now add drawing elements on ths paragraph:
         if (options.ExtractImages)
