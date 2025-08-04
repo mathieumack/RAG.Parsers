@@ -13,4 +13,10 @@ public class ExtractOptions
     /// </summary>
     /// <value>true</value>
     public bool ExtractTables { get; set; } = true;
+
+    /// <summary>
+    /// Extracts the comments from the document
+    /// </summary>
+    /// <value>false</value>
+    public bool ExtractComments { get; set; } = false;
 }
