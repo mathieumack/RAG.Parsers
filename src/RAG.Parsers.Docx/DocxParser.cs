@@ -1,14 +1,14 @@
 ﻿using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
-using Microsoft.Extensions.Logging;
-using RAG.Parsers.Docx.Models;
-using RAG.Parsers.Docx.Models.Table;
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using Microsoft.Extensions.Logging;
+using RAG.Parsers.Docx.Models;
+using RAG.Parsers.Docx.Models.Table;
+using System;
 
 namespace RAG.Parsers.Docx;
 
@@ -65,16 +65,17 @@ public class DocxParser : IDisposable
         var wordprocessingDocument = WordprocessingDocument.Open(data, false);
         try
         {
-            // Stringbuilder for the output
             StringBuilder sb = new();
-
             MainDocumentPart? mainPart = wordprocessingDocument.MainDocumentPart ??
                 throw new InvalidOperationException("The main document part is missing.");
-
             Body? body = mainPart.Document.Body ??
                 throw new InvalidOperationException("The document body is missing.");
 
-            // Get Hyperlinks and Styles
+            // Récupérer les commentaires du document
+            var commentsPart = mainPart.GetPartsOfType<WordprocessingCommentsPart>().FirstOrDefault();
+            var allComments = commentsPart?.Comments?.Elements<Comment>().ToList() ?? new List<Comment>();
+            var commentMap = new Dictionary<string, CommentInfo>();
+            int commentCounter = 1;
 
             // Explore file
             var parts = mainPart.Document.Descendants().FirstOrDefault();
@@ -84,11 +85,22 @@ public class DocxParser : IDisposable
                 {
                     if (node is Paragraph paragraph)
                         // Process Text and paragraph
-                        ProcessParagraph(mainPart, paragraph, context, options, ref sb);
+                        ProcessParagraph(mainPart, paragraph, context, options, ref sb, allComments, commentMap, ref commentCounter);
                     else if (node is Table table && options.ExtractTables)
                         // Process Table
                         ProcessTable(mainPart, table, context, ref sb);
                 }
+
+            // Ajouter la section des commentaires en annexe
+            if (commentMap.Count > 0)
+            {
+                sb.AppendLine();
+                sb.AppendLine("> Comments");
+                foreach (var kvp in commentMap.OrderBy(x => x.Value.Index))
+                {
+                    sb.AppendLine($"> ({kvp.Value.Index}) {kvp.Value.Text}");
+                }
+            }
 
             // Return text generated
             var textContent = sb.ToString().Trim();
@@ -113,11 +125,14 @@ public class DocxParser : IDisposable
     /// <param name="paragraph"></param>
     /// <param name="context"></param>
     /// <param name="sb"></param>
-    private void ProcessParagraph(MainDocumentPart mainPart, 
-                                  Paragraph paragraph, 
+    private void ProcessParagraph(MainDocumentPart mainPart,
+                                  Paragraph paragraph,
                                   ExtractOutput context,
                                   ExtractOptions options,
-                                  ref StringBuilder sb)
+                                  ref StringBuilder sb,
+                                  List<Comment> allComments,
+                                  Dictionary<string, CommentInfo> commentMap,
+                                  ref int commentCounter)
     {
         var stringToAdd = "";
 
@@ -147,8 +162,46 @@ public class DocxParser : IDisposable
                 stringToAdd += GetLabelAndDecoration(child);
         }
 
+        // Ajout des indices de commentaires et stockage des infos
+        var commentIndices = new List<int>();
+        var commentInfos = new List<CommentInfo>();
+        foreach (var commentRef in paragraph.Descendants<CommentRangeStart>())
+        {
+            var commentId = commentRef.Id.Value;
+            if (!commentMap.ContainsKey(commentId))
+            {
+                var comment = allComments.FirstOrDefault(c => c.Id.Value == commentId);
+                if (comment != null)
+                {
+                    var author = comment.Author ?? "";
+                    var date = comment.Date != null ? comment.Date.Value.ToString("yyyy-MM-dd") : "";
+                    var info = new CommentInfo { Index = commentCounter, Text = comment.InnerText, Author = author, Date = date };
+                    commentMap[commentId] = info;
+                    commentIndices.Add(commentCounter);
+                    commentInfos.Add(info);
+                    commentCounter++;
+                }
+            }
+            else
+            {
+                var info = commentMap[commentId];
+                commentIndices.Add(info.Index);
+                commentInfos.Add(info);
+            }
+        }
+        if (commentIndices.Count > 0)
+        {
+            stringToAdd += string.Join("", commentIndices.Select(i => $"({i})"));
+        }
+
         if (!string.IsNullOrEmpty(stringToAdd))
             sb.AppendLine(stringToAdd);
+
+        // Affichage des commentaires juste sous le texte lié
+        foreach (var info in commentInfos)
+        {
+            sb.AppendLine($"> ({info.Index}) : {info.Author} ({info.Date}) : {info.Text}");
+        }
 
         // Now add drawing elements on ths paragraph:
         if (options.ExtractImages)
@@ -758,5 +811,13 @@ public class DocxParser : IDisposable
     {
         // Nothing to release
         GC.SuppressFinalize(this);
+    }
+
+    private class CommentInfo
+    {
+        public int Index { get; set; }
+        public string Text { get; set; }
+        public string Author { get; set; }
+        public string Date { get; set; }
     }
 }
