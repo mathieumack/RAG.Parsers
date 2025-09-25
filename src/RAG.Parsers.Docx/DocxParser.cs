@@ -91,7 +91,7 @@ public class DocxParser : IDisposable
                         ProcessTable(mainPart, table, context, ref sb);
                 }
 
-            // Ajouter la section des commentaires en annexe
+            // Add comment section at the end of the document
             if (commentMap.Count > 0)
             {
                 sb.AppendLine();
@@ -162,7 +162,7 @@ public class DocxParser : IDisposable
                 stringToAdd += GetLabelAndDecoration(child);
         }
 
-        // Ajout des indices de commentaires et stockage des infos
+        // Add comment index and details if any
         var commentIndices = new List<int>();
         var commentInfos = new List<CommentInfo>();
         foreach (var commentRef in paragraph.Descendants<CommentRangeStart>())
@@ -195,13 +195,20 @@ public class DocxParser : IDisposable
         }
 
         if (!string.IsNullOrEmpty(stringToAdd))
+        {
             sb.AppendLine(stringToAdd);
+            sb.AppendLine();
+        }
 
         // Affichage des commentaires juste sous le texte lié
         foreach (var info in commentInfos)
         {
             sb.AppendLine($"> ({info.Index}) : {info.Author} ({info.Date}) : {info.Text}");
+            sb.AppendLine();
         }
+
+        if(commentInfos.Any())
+            sb.AppendLine();
 
         // Now add drawing elements on ths paragraph:
         if (options.ExtractImages)

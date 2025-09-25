@@ -38,6 +38,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="TestFiles\retrospective.docx">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="TestFiles\Sample.docx">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
