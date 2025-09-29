@@ -22,7 +22,8 @@ public class DocxParser_Should
         var result = parser.DocToMarkdownWithContext(filePath, new Models.ExtractOptions()
         {  
             ExtractTables = true,
-            ExtractImages = true
+            ExtractImages = true,
+            ExtractRevisionContent = true
         });
 
         // Assert

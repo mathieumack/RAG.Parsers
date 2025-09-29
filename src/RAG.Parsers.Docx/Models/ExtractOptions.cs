@@ -13,4 +13,9 @@ public class ExtractOptions
     /// </summary>
     /// <value>true</value>
     public bool ExtractTables { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether revision content should be extracted during processing.
+    /// </summary>
+    public bool ExtractRevisionContent { get; set; } = true;
 }

@@ -71,6 +71,10 @@ public class DocxParser : IDisposable
             Body? body = mainPart.Document.Body ??
                 throw new InvalidOperationException("The document body is missing.");
 
+            // Populate hyperlinks and styles
+            context.Hyperlinks = GetAllHyperlinks(mainPart);
+            context.DictionaryStyles = GetAllStyles(mainPart);
+
             // Récupérer les commentaires du document
             var commentsPart = mainPart.GetPartsOfType<WordprocessingCommentsPart>().FirstOrDefault();
             var allComments = commentsPart?.Comments?.Elements<Comment>().ToList() ?? new List<Comment>();
@@ -148,18 +152,28 @@ public class DocxParser : IDisposable
             return;
         }
 
+        if(paragraph.ParagraphId == "3DD1B4C3")
+        {
+            var elements = paragraph.ChildElements.ToList();
+            int i = 0;
+        }
+
         // Explore all sub elements
+
         foreach (var child in paragraph.ChildElements)
         {
+            if(child is DeletedRun && options.ExtractRevisionContent)
+            {
+                stringToAdd += GetDeletedText((DeletedRun)child);
+                continue;
+            }
+
             // Empty elements, bypass
             if (string.IsNullOrEmpty(child.InnerText))
                 continue;
 
-            // Hyperlink => get link - otherwise => get text and styling
-            if (child.GetType() == typeof(Hyperlink))
-                stringToAdd += GetHyperlink((Hyperlink)child, context.Hyperlinks);
-            else
-                stringToAdd += GetLabelAndDecoration(child);
+            // Extract text honoring revisions (deleted) and hyperlinks
+            stringToAdd += ExtractTextWithRevisions(child, options, context.Hyperlinks);
         }
 
         // Add comment index and details if any
@@ -348,7 +362,17 @@ public class DocxParser : IDisposable
     /// <param name="sb">The StringBuilder to append the Markdown output to.</param>
     private void ProcessCellContent(TableCell cell, MainDocumentPart mainPart, ExtractOutput context, ref StringBuilder sb)
     {
-        sb.Append(cell.InnerText);
+        // Build cell content while respecting revisions (deleted text) and hyperlinks
+        var cellContent = new StringBuilder();
+        foreach (var child in cell.ChildElements)
+        {
+            if (string.IsNullOrEmpty(child.InnerText))
+                continue;
+
+            cellContent.Append(ExtractTextWithRevisions(child, new ExtractOptions(), context.Hyperlinks));
+        }
+
+        sb.Append(cellContent.ToString());
         foreach (var drawing in cell.Descendants<Drawing>())
         {
             ProcessDrawing(drawing, mainPart, context, ref sb);
@@ -558,12 +582,29 @@ public class DocxParser : IDisposable
 
     #region Labels and Decoration
 
+    private static string GetDeletedText(DeletedRun element)
+    {
+        var stringToReturn = "";
+        try
+        {
+            stringToReturn += "~~";
+            stringToReturn += $"(Author : {element.Author} - {element.DateUtc})";
+            stringToReturn += element.InnerText;
+            stringToReturn += "~~";
+        }
+        catch (Exception)
+        {
+            return stringToReturn;
+        }
+        return stringToReturn;
+    }
+
     /// <summary>
     /// Get text and styling associated
     /// </summary>
     /// <param name="element"></param>
     /// <returns></returns>
-    private static string GetLabelAndDecoration(OpenXmlElement element)
+    private static string GetLabelAndDecoration(OpenXmlElement element, ExtractOptions options)
     {
         // Dispatcher
         return element.FirstChild switch
@@ -648,6 +689,36 @@ public class DocxParser : IDisposable
         }
 
         return stringToReturn;
+    }
+
+    /// <summary>
+    /// Extracts text from the element while preserving deleted revision text and hyperlinks when requested.
+    /// </summary>
+    /// <param name="element">Element to extract.</param>
+    /// <param name="options">Extraction options (controls revision content extraction).</param>
+    /// <param name="hyperlinks">List of hyperlinks for resolving links.</param>
+    /// <returns>Extracted string.</returns>
+    private string ExtractTextWithRevisions(OpenXmlElement element, ExtractOptions options, List<HyperlinkRelationship> hyperlinks)
+    {
+        var sb = new StringBuilder();
+        var children = element.ChildElements.ToList();
+        foreach (var child in children)
+        {
+            if (child is Hyperlink hyperlinkElem)
+            {
+                sb.Append(GetHyperlink(hyperlinkElem, hyperlinks));
+            }
+            else if (options != null && options.ExtractRevisionContent && child is DeletedRun deleted)
+            {
+                sb.Append(GetDeletedText(deleted));
+            }
+            else
+            {
+                sb.Append(GetLabelAndDecoration(child, options));
+            }
+        }
+
+        return sb.ToString();
     }
 
     #endregion
