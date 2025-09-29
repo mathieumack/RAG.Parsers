@@ -152,12 +152,6 @@ public class DocxParser : IDisposable
             return;
         }
 
-        if(paragraph.ParagraphId == "3DD1B4C3")
-        {
-            var elements = paragraph.ChildElements.ToList();
-            int i = 0;
-        }
-
         // Explore all sub elements
 
         foreach (var child in paragraph.ChildElements)
@@ -587,10 +581,7 @@ public class DocxParser : IDisposable
         var stringToReturn = "";
         try
         {
-            stringToReturn += "~~";
-            stringToReturn += $"(Author : {element.Author} - {element.DateUtc})";
-            stringToReturn += element.InnerText;
-            stringToReturn += "~~";
+            stringToReturn += $"~~(Author : {element.Author} - {element.DateUtc}) {element.InnerText.Trim()}~~";
         }
         catch (Exception)
         {
