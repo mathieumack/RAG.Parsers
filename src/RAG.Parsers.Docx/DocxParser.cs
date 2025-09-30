@@ -581,7 +581,7 @@ public class DocxParser : IDisposable
         var stringToReturn = "";
         try
         {
-            stringToReturn += $"~~(Author : {element.Author} - {element.DateUtc}) {element.InnerText.Trim()}~~";
+            stringToReturn += $"~~(revision : {element.Author} - {element.Date} : {element.InnerText.Trim()})~~";
         }
         catch (Exception)
         {
