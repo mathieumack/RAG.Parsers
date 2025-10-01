@@ -1,14 +1,14 @@
 ﻿using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
-using Microsoft.Extensions.Logging;
-using RAG.Parsers.Docx.Models;
-using RAG.Parsers.Docx.Models.Table;
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using Microsoft.Extensions.Logging;
+using RAG.Parsers.Docx.Models;
+using RAG.Parsers.Docx.Models.Table;
+using System;
 
 namespace RAG.Parsers.Docx;
 
@@ -65,16 +65,21 @@ public class DocxParser : IDisposable
         var wordprocessingDocument = WordprocessingDocument.Open(data, false);
         try
         {
-            // Stringbuilder for the output
             StringBuilder sb = new();
-
             MainDocumentPart? mainPart = wordprocessingDocument.MainDocumentPart ??
                 throw new InvalidOperationException("The main document part is missing.");
-
             Body? body = mainPart.Document.Body ??
                 throw new InvalidOperationException("The document body is missing.");
 
-            // Get Hyperlinks and Styles
+            // Populate hyperlinks and styles
+            context.Hyperlinks = GetAllHyperlinks(mainPart);
+            context.DictionaryStyles = GetAllStyles(mainPart);
+
+            // Récupérer les commentaires du document
+            var commentsPart = mainPart.GetPartsOfType<WordprocessingCommentsPart>().FirstOrDefault();
+            var allComments = commentsPart?.Comments?.Elements<Comment>().ToList() ?? new List<Comment>();
+            var commentMap = new Dictionary<string, CommentInfo>();
+            int commentCounter = 1;
 
             // Explore file
             var parts = mainPart.Document.Descendants().FirstOrDefault();
@@ -84,11 +89,22 @@ public class DocxParser : IDisposable
                 {
                     if (node is Paragraph paragraph)
                         // Process Text and paragraph
-                        ProcessParagraph(mainPart, paragraph, context, options, ref sb);
+                        ProcessParagraph(mainPart, paragraph, context, options, ref sb, allComments, commentMap, ref commentCounter);
                     else if (node is Table table && options.ExtractTables)
                         // Process Table
                         ProcessTable(mainPart, table, context, ref sb);
                 }
+
+            // Add comment section at the end of the document
+            if (commentMap.Count > 0)
+            {
+                sb.AppendLine();
+                sb.AppendLine("> Comments");
+                foreach (var kvp in commentMap.OrderBy(x => x.Value.Index))
+                {
+                    sb.AppendLine($"> ({kvp.Value.Index}) {kvp.Value.Text}");
+                }
+            }
 
             // Return text generated
             var textContent = sb.ToString().Trim();
@@ -113,11 +129,14 @@ public class DocxParser : IDisposable
     /// <param name="paragraph"></param>
     /// <param name="context"></param>
     /// <param name="sb"></param>
-    private void ProcessParagraph(MainDocumentPart mainPart, 
-                                  Paragraph paragraph, 
+    private void ProcessParagraph(MainDocumentPart mainPart,
+                                  Paragraph paragraph,
                                   ExtractOutput context,
                                   ExtractOptions options,
-                                  ref StringBuilder sb)
+                                  ref StringBuilder sb,
+                                  List<Comment> allComments,
+                                  Dictionary<string, CommentInfo> commentMap,
+                                  ref int commentCounter)
     {
         var stringToAdd = "";
 
@@ -134,21 +153,70 @@ public class DocxParser : IDisposable
         }
 
         // Explore all sub elements
+
         foreach (var child in paragraph.ChildElements)
         {
+            if(child is DeletedRun && options.ExtractRevisionContent)
+            {
+                stringToAdd += GetDeletedText((DeletedRun)child);
+                continue;
+            }
+
             // Empty elements, bypass
             if (string.IsNullOrEmpty(child.InnerText))
                 continue;
 
-            // Hyperlink => get link - otherwise => get text and styling
-            if (child.GetType() == typeof(Hyperlink))
-                stringToAdd += GetHyperlink((Hyperlink)child, context.Hyperlinks);
+            // Extract text honoring revisions (deleted) and hyperlinks
+            stringToAdd += ExtractTextWithRevisions(child, options, context.Hyperlinks);
+        }
+
+        // Add comment index and details if any
+        var commentIndices = new List<int>();
+        var commentInfos = new List<CommentInfo>();
+        foreach (var commentRef in paragraph.Descendants<CommentRangeStart>())
+        {
+            var commentId = commentRef.Id.Value;
+            if (!commentMap.ContainsKey(commentId))
+            {
+                var comment = allComments.FirstOrDefault(c => c.Id.Value == commentId);
+                if (comment != null)
+                {
+                    var author = comment.Author ?? "";
+                    var date = comment.Date != null ? comment.Date.Value.ToString("yyyy-MM-dd") : "";
+                    var info = new CommentInfo { Index = commentCounter, Text = comment.InnerText, Author = author, Date = date };
+                    commentMap[commentId] = info;
+                    commentIndices.Add(commentCounter);
+                    commentInfos.Add(info);
+                    commentCounter++;
+                }
+            }
             else
-                stringToAdd += GetLabelAndDecoration(child);
+            {
+                var info = commentMap[commentId];
+                commentIndices.Add(info.Index);
+                commentInfos.Add(info);
+            }
+        }
+        if (commentIndices.Count > 0)
+        {
+            stringToAdd += string.Join("", commentIndices.Select(i => $"({i})"));
         }
 
         if (!string.IsNullOrEmpty(stringToAdd))
+        {
             sb.AppendLine(stringToAdd);
+            sb.AppendLine();
+        }
+
+        // Affichage des commentaires juste sous le texte lié
+        foreach (var info in commentInfos)
+        {
+            sb.AppendLine($"> ({info.Index}) : {info.Author} ({info.Date}) : {info.Text}");
+            sb.AppendLine();
+        }
+
+        if(commentInfos.Any())
+            sb.AppendLine();
 
         // Now add drawing elements on ths paragraph:
         if (options.ExtractImages)
@@ -288,7 +356,17 @@ public class DocxParser : IDisposable
     /// <param name="sb">The StringBuilder to append the Markdown output to.</param>
     private void ProcessCellContent(TableCell cell, MainDocumentPart mainPart, ExtractOutput context, ref StringBuilder sb)
     {
-        sb.Append(cell.InnerText);
+        // Build cell content while respecting revisions (deleted text) and hyperlinks
+        var cellContent = new StringBuilder();
+        foreach (var child in cell.ChildElements)
+        {
+            if (string.IsNullOrEmpty(child.InnerText))
+                continue;
+
+            cellContent.Append(ExtractTextWithRevisions(child, new ExtractOptions(), context.Hyperlinks));
+        }
+
+        sb.Append(cellContent.ToString());
         foreach (var drawing in cell.Descendants<Drawing>())
         {
             ProcessDrawing(drawing, mainPart, context, ref sb);
@@ -498,12 +576,26 @@ public class DocxParser : IDisposable
 
     #region Labels and Decoration
 
+    private static string GetDeletedText(DeletedRun element)
+    {
+        var stringToReturn = "";
+        try
+        {
+            stringToReturn += $"~~(revision : {element.Author} - {element.Date} : {element.InnerText.Trim()})~~";
+        }
+        catch (Exception)
+        {
+            return stringToReturn;
+        }
+        return stringToReturn;
+    }
+
     /// <summary>
     /// Get text and styling associated
     /// </summary>
     /// <param name="element"></param>
     /// <returns></returns>
-    private static string GetLabelAndDecoration(OpenXmlElement element)
+    private static string GetLabelAndDecoration(OpenXmlElement element, ExtractOptions options)
     {
         // Dispatcher
         return element.FirstChild switch
@@ -588,6 +680,36 @@ public class DocxParser : IDisposable
         }
 
         return stringToReturn;
+    }
+
+    /// <summary>
+    /// Extracts text from the element while preserving deleted revision text and hyperlinks when requested.
+    /// </summary>
+    /// <param name="element">Element to extract.</param>
+    /// <param name="options">Extraction options (controls revision content extraction).</param>
+    /// <param name="hyperlinks">List of hyperlinks for resolving links.</param>
+    /// <returns>Extracted string.</returns>
+    private string ExtractTextWithRevisions(OpenXmlElement element, ExtractOptions options, List<HyperlinkRelationship> hyperlinks)
+    {
+        var sb = new StringBuilder();
+        var children = element.ChildElements.ToList();
+        foreach (var child in children)
+        {
+            if (child is Hyperlink hyperlinkElem)
+            {
+                sb.Append(GetHyperlink(hyperlinkElem, hyperlinks));
+            }
+            else if (options != null && options.ExtractRevisionContent && child is DeletedRun deleted)
+            {
+                sb.Append(GetDeletedText(deleted));
+            }
+            else
+            {
+                sb.Append(GetLabelAndDecoration(child, options));
+            }
+        }
+
+        return sb.ToString();
     }
 
     #endregion
@@ -758,5 +880,13 @@ public class DocxParser : IDisposable
     {
         // Nothing to release
         GC.SuppressFinalize(this);
+    }
+
+    private class CommentInfo
+    {
+        public int Index { get; set; }
+        public string Text { get; set; }
+        public string Author { get; set; }
+        public string Date { get; set; }
     }
 }
