@@ -16,6 +16,6 @@ public class VttParserTests
         var result = parser.ToMarkdown(stream);
 
         // Assert
-        Assert.IsFalse(string.IsNullOrWhiteSpace(result.Output));
+        Assert.IsFalse(string.IsNullOrWhiteSpace(result.Output)); 
     }
 }
