@@ -8,7 +8,21 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="TestFiles\test large vtt.vtt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="TestFiles\test large vtt.vtt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="MSTest" Version="4.0.0-preview.25415.9" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\RAG.Parsers.VTT\RAG.Parsers.VTT.csproj" />
   </ItemGroup>
 
   <ItemGroup>
