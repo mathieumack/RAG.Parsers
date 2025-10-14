@@ -7,7 +7,7 @@ using System.Text.RegularExpressions;
 
 namespace RAG.Parsers.VTT;
 
-public class VttParser
+public class VttParser : IDisposable
 {
     public ExtractOutput ToMarkdown(Stream data, ExtractOptions options = null)
     {
@@ -103,5 +103,10 @@ public class VttParser
 
         result.Output = output.ToString().Trim();
         return result;
+    }
+
+    public void Dispose()
+    {
+        // Nothing to do here
     }
 }
