@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.0.32112.339
+# Visual Studio Version 18
+VisualStudioVersion = 18.0.11109.219 d18.0-oob
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Libraries", "Libraries", "{DF35D5BB-6544-4719-BA72-5AB3986A9C3F}"
 EndProject
@@ -18,6 +18,10 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RAG.Parsers.Pdf", "RAG.Parsers.Pdf\RAG.Parsers.Pdf.csproj", "{F460939B-1C6B-46A0-B973-7DDBEA7EAAFA}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RAG.Parsers.Pdf.UnitTests", "RAG.Parsers.Pdf.UnitTests\RAG.Parsers.Pdf.UnitTests.csproj", "{34BF54E5-1D80-4BE6-942C-1D7B5F645486}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RAG.Parsers.VTT", "RAG.Parsers.VTT\RAG.Parsers.VTT.csproj", "{60BEED19-EFA7-4885-961C-6F445AD11DAE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RAG.Parsers.VTT.UnitTests", "RAG.Parsers.VTT.UnitTests\RAG.Parsers.VTT.UnitTests.csproj", "{617E9AD4-08FD-49C1-AB74-5F0419EADDD9}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -49,6 +53,14 @@ Global
 		{34BF54E5-1D80-4BE6-942C-1D7B5F645486}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{34BF54E5-1D80-4BE6-942C-1D7B5F645486}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{34BF54E5-1D80-4BE6-942C-1D7B5F645486}.Release|Any CPU.Build.0 = Release|Any CPU
+		{60BEED19-EFA7-4885-961C-6F445AD11DAE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{60BEED19-EFA7-4885-961C-6F445AD11DAE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{60BEED19-EFA7-4885-961C-6F445AD11DAE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{60BEED19-EFA7-4885-961C-6F445AD11DAE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{617E9AD4-08FD-49C1-AB74-5F0419EADDD9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{617E9AD4-08FD-49C1-AB74-5F0419EADDD9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{617E9AD4-08FD-49C1-AB74-5F0419EADDD9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{617E9AD4-08FD-49C1-AB74-5F0419EADDD9}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -60,6 +72,8 @@ Global
 		{7269AFD3-7679-4BCB-9287-BBD396E0B162} = {469521A2-D12C-467D-B324-C5EF1F6FF85D}
 		{F460939B-1C6B-46A0-B973-7DDBEA7EAAFA} = {DF35D5BB-6544-4719-BA72-5AB3986A9C3F}
 		{34BF54E5-1D80-4BE6-942C-1D7B5F645486} = {469521A2-D12C-467D-B324-C5EF1F6FF85D}
+		{60BEED19-EFA7-4885-961C-6F445AD11DAE} = {DF35D5BB-6544-4719-BA72-5AB3986A9C3F}
+		{617E9AD4-08FD-49C1-AB74-5F0419EADDD9} = {469521A2-D12C-467D-B324-C5EF1F6FF85D}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {F924D346-1498-4E75-9A21-1CAC84F44B13}
