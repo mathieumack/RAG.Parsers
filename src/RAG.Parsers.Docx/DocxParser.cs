@@ -62,7 +62,6 @@ public class DocxParser : IDisposable
             Images = new()
         };
 
-        // Check if stream is empty or too small to be a valid DOCX file
         bool isEmpty = IsEmptyStream(data);
         if (isEmpty)
         {
