@@ -70,10 +70,10 @@ public class DocxParser : IDisposable
             return context;
         }
 
+        var wordprocessingDocument = WordprocessingDocument.Open(data, false);
+
         try
         {
-            var wordprocessingDocument = WordprocessingDocument.Open(data, false);
-
             StringBuilder sb = new();
             MainDocumentPart? mainPart = wordprocessingDocument.MainDocumentPart ??
                 throw new InvalidOperationException("The main document part is missing.");
