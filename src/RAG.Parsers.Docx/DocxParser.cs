@@ -75,7 +75,8 @@ public class DocxParser : IDisposable
         MemoryStream memoryStream = null;
         if (!data.CanSeek)
         {
-            memoryStream = new MemoryStream();
+            // Use initial capacity to avoid buffer reallocations during copy
+            memoryStream = new MemoryStream(capacity: 8192);
             data.CopyTo(memoryStream);
             memoryStream.Position = 0;
             streamToUse = memoryStream;
@@ -91,15 +92,13 @@ public class DocxParser : IDisposable
                 return context;
             }
 
-            var wordprocessingDocument = WordprocessingDocument.Open(streamToUse, false);
+            using var wordprocessingDocument = WordprocessingDocument.Open(streamToUse, false);
 
-            try
-            {
-                StringBuilder sb = new();
-                MainDocumentPart? mainPart = wordprocessingDocument.MainDocumentPart ??
-                    throw new InvalidOperationException("The main document part is missing.");
-                Body? body = mainPart.Document.Body ??
-                    throw new InvalidOperationException("The document body is missing.");
+            StringBuilder sb = new();
+            MainDocumentPart? mainPart = wordprocessingDocument.MainDocumentPart ??
+                throw new InvalidOperationException("The main document part is missing.");
+            Body? body = mainPart.Document.Body ??
+                throw new InvalidOperationException("The document body is missing.");
 
             // Populate hyperlinks and styles
             context.Hyperlinks = GetAllHyperlinks(mainPart);
@@ -140,13 +139,7 @@ public class DocxParser : IDisposable
             var textContent = sb.ToString().Trim();
             context.Output = textContent;
 
-                return context;
-            }
-            finally
-            {
-                // Release file
-                wordprocessingDocument.Dispose();
-            }
+            return context;
         }
         finally
         {
