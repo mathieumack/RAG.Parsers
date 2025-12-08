@@ -18,6 +18,7 @@ namespace RAG.Parsers.Docx;
 public class DocxParser : IDisposable
 {
     private readonly ILogger<DocxParser> logger;
+    private const int DefaultMemoryStreamCapacity = 8192;
 
     public DocxParser(ILogger<DocxParser> logger)
     {
@@ -76,7 +77,7 @@ public class DocxParser : IDisposable
         if (!data.CanSeek)
         {
             // Use initial capacity to avoid buffer reallocations during copy
-            memoryStream = new MemoryStream(capacity: 8192);
+            memoryStream = new MemoryStream(capacity: DefaultMemoryStreamCapacity);
             data.CopyTo(memoryStream);
             memoryStream.Position = 0;
             streamToUse = memoryStream;
