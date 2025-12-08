@@ -63,7 +63,7 @@ public class DocxParser : IDisposable
         };
 
         // Check if stream is empty or too small to be a valid DOCX file
-        if (data == null || data.Length == 0)
+        if (data == null || (data.CanSeek && data.Length == 0) || data == Stream.Null)
         {
             logger.LogWarning("Empty file provided.");
             context.Output = string.Empty;
