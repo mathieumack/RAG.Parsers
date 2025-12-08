@@ -1,14 +1,14 @@
 ﻿using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
 using Microsoft.Extensions.Logging;
 using RAG.Parsers.Docx.Models;
 using RAG.Parsers.Docx.Models.Table;
 using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text;
 
 namespace RAG.Parsers.Docx;
 
@@ -62,7 +62,16 @@ public class DocxParser : IDisposable
             Images = new()
         };
 
+        // Check if stream is empty or too small to be a valid DOCX file
+        if (data == null || data.Length == 0)
+        {
+            logger.LogWarning("Empty file provided.");
+            context.Output = string.Empty;
+            return context;
+        }
+
         var wordprocessingDocument = WordprocessingDocument.Open(data, false);
+
         try
         {
             StringBuilder sb = new();
@@ -156,7 +165,7 @@ public class DocxParser : IDisposable
 
         foreach (var child in paragraph.ChildElements)
         {
-            if(child is DeletedRun && options.ExtractRevisionContent)
+            if (child is DeletedRun && options.ExtractRevisionContent)
             {
                 stringToAdd += GetDeletedText((DeletedRun)child);
                 continue;
@@ -215,7 +224,7 @@ public class DocxParser : IDisposable
             sb.AppendLine();
         }
 
-        if(commentInfos.Any())
+        if (commentInfos.Any())
             sb.AppendLine();
 
         // Now add drawing elements on ths paragraph:
