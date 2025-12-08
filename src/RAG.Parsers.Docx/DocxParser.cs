@@ -18,6 +18,7 @@ namespace RAG.Parsers.Docx;
 public class DocxParser : IDisposable
 {
     private readonly ILogger<DocxParser> logger;
+    private const int DefaultMemoryStreamCapacity = 8192;
 
     public DocxParser(ILogger<DocxParser> logger)
     {
@@ -62,18 +63,38 @@ public class DocxParser : IDisposable
             Images = new()
         };
 
-        bool isEmpty = IsEmptyStream(data);
-        if (isEmpty)
+        // Handle null or Stream.Null
+        if (data == null || data == Stream.Null)
         {
             logger.LogWarning("Empty file provided.");
             context.Output = string.Empty;
             return context;
         }
 
-        var wordprocessingDocument = WordprocessingDocument.Open(data, false);
+        // For non-seekable streams, wrap in MemoryStream to avoid consuming bytes during empty check
+        Stream streamToUse = data;
+        MemoryStream memoryStream = null;
+        if (!data.CanSeek)
+        {
+            // Use initial capacity to avoid buffer reallocations during copy
+            memoryStream = new MemoryStream(capacity: DefaultMemoryStreamCapacity);
+            data.CopyTo(memoryStream);
+            memoryStream.Position = 0;
+            streamToUse = memoryStream;
+        }
 
         try
         {
+            // Check if stream is empty
+            if (streamToUse.Length == 0)
+            {
+                logger.LogWarning("Empty file provided.");
+                context.Output = string.Empty;
+                return context;
+            }
+
+            using var wordprocessingDocument = WordprocessingDocument.Open(streamToUse, false);
+
             StringBuilder sb = new();
             MainDocumentPart? mainPart = wordprocessingDocument.MainDocumentPart ??
                 throw new InvalidOperationException("The main document part is missing.");
@@ -123,42 +144,9 @@ public class DocxParser : IDisposable
         }
         finally
         {
-            // Release file
-            wordprocessingDocument.Dispose();
+            // Clean up memory stream if we created one
+            memoryStream?.Dispose();
         }
-    }
-
-    private static bool IsEmptyStream(Stream data)
-    {
-        bool isEmpty = false;
-        if (data == null || data == Stream.Null)
-        {
-            isEmpty = true;
-        }
-        else if (data.CanSeek)
-        {
-            isEmpty = data.Length == 0;
-        }
-        else
-        {
-            // Try to read one byte to check for emptiness
-            int b = data.ReadByte();
-            if (b == -1)
-            {
-                isEmpty = true;
-            }
-            else
-            {
-                // If not empty, reset position if possible
-                if (data.CanSeek)
-                {
-                    data.Seek(-1, SeekOrigin.Current);
-                }
-                // Otherwise, the byte is lost, but this is acceptable for emptiness check
-            }
-        }
-
-        return isEmpty;
     }
 
     #endregion
