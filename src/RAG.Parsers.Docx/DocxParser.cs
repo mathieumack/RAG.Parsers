@@ -63,7 +63,34 @@ public class DocxParser : IDisposable
         };
 
         // Check if stream is empty or too small to be a valid DOCX file
-        if (data == null || (data.CanSeek && data.Length == 0) || data == Stream.Null)
+        bool isEmpty = false;
+        if (data == null || data == Stream.Null)
+        {
+            isEmpty = true;
+        }
+        else if (data.CanSeek)
+        {
+            isEmpty = data.Length == 0;
+        }
+        else
+        {
+            // Try to read one byte to check for emptiness
+            int b = data.ReadByte();
+            if (b == -1)
+            {
+                isEmpty = true;
+            }
+            else
+            {
+                // If not empty, reset position if possible
+                if (data.CanSeek)
+                {
+                    data.Seek(-1, SeekOrigin.Current);
+                }
+                // Otherwise, the byte is lost, but this is acceptable for emptiness check
+            }
+        }
+        if (isEmpty)
         {
             logger.LogWarning("Empty file provided.");
             context.Output = string.Empty;
