@@ -18,6 +18,8 @@ public class PdfParser_Should
         var parser = new PdfParser(loggerFactory.CreateLogger<PdfParser>());
         var filePath = Path.Combine(Environment.CurrentDirectory, documentPath);
 
+        var result2 = File.Exists(filePath);
+
         // Act
         var result = parser.ToMarkdown(filePath, new ExtractOptions()
         {

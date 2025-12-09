@@ -50,10 +50,10 @@ public class PdfParser : IDisposable
     public ExtractOutput ToMarkdown(string filePath, ExtractOptions options)
     {
         // Open file
-        sourceStream = File.OpenRead(filePath);
+        var source = File.OpenRead(filePath);
 
         // Convert file
-        return ToMarkdown(sourceStream, options);
+        return ToMarkdown(source, options);
     }
 
     /// <summary>
