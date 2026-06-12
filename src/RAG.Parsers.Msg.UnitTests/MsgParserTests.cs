@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Logging;
 using RAG.Parsers.Msg.Models;
 
 namespace RAG.Parsers.Msg.UnitTests;
@@ -10,10 +9,7 @@ public class MsgParserTests
 
     private MsgParser CreateParser()
     {
-        using var loggerFactory = LoggerFactory.Create(builder => builder
-            .SetMinimumLevel(LogLevel.Trace)
-            .AddConsole());
-        return new MsgParser(loggerFactory.CreateLogger<MsgParser>());
+        return new MsgParser(Microsoft.Extensions.Logging.Abstractions.NullLogger<MsgParser>.Instance);
     }
 
     [TestMethod]
