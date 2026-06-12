@@ -1,0 +1,34 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <ProjectGuid>{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}</ProjectGuid>
+    <TargetFrameworks>net9.0;net10.0</TargetFrameworks>
+    <Preview>true</Preview>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <LangVersion>preview</LangVersion>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+    <Authors>MACK Mathieu,CECCALDI Adrien</Authors>
+    <Copyright>Copyright (c) MACK Mathieu</Copyright>
+    <PackageProjectUrl>https://github.com/mathieumack/RAG.Parsers</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/mathieumack/RAG.Parsers</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <Description>Helper library that lets you parse Outlook .msg email files and extract structured data (headers, body, attachments) in a RAG-friendly format.</Description>
+    <PackageTags>devops;msg;outlook;email;markdown;rag</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MsgReader" Version="6.0.12" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.1" />
+  </ItemGroup>
+
+</Project>
