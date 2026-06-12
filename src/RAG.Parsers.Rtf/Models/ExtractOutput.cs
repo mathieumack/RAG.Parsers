@@ -1,7 +1,7 @@
 namespace RAG.Parsers.Rtf.Models;
 
 /// <summary>
-/// Output document that contains all extracted informations
+/// Output document that contains all extracted information
 /// </summary>
 public class ExtractOutput
 {
