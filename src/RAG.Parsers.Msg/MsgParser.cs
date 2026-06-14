@@ -18,10 +18,14 @@ public class MsgParser : IDisposable
 {
     private readonly ILogger<MsgParser> logger;
 
+    static MsgParser()
+    {
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+    }
+
     public MsgParser(ILogger<MsgParser> logger)
     {
         this.logger = logger;
-        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
     }
 
     #region Public Methods
