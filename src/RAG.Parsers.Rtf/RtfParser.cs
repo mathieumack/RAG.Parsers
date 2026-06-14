@@ -133,7 +133,7 @@ public class RtfParser : IDisposable
                     Id = id,
                     Format = format,
                     MarkdownRaw = raw,
-                    RawBytes = bytes
+                    RawBytes = Array.AsReadOnly(bytes)
                 });
 
                 return raw;
