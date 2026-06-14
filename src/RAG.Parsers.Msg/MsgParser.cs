@@ -21,6 +21,7 @@ public class MsgParser : IDisposable
     public MsgParser(ILogger<MsgParser> logger)
     {
         this.logger = logger;
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
     }
 
     #region Public Methods
