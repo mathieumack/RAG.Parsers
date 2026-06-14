@@ -1,9 +1,10 @@
+using Html2Markdown;
 using RAG.Parsers.Rtf.Models;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Web;
 
 namespace RAG.Parsers.Rtf;
 
@@ -18,6 +19,7 @@ public class RtfParser : IDisposable
         // which are not available in .NET Core by default.
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
     }
+
     #region Public Methods
 
     /// <summary>
@@ -50,56 +52,93 @@ public class RtfParser : IDisposable
     #region Private Methods
 
     /// <summary>
-    /// Converts RTF string content to an ExtractOutput with plain markdown text.
+    /// Converts RTF string content to an ExtractOutput with markdown text and extracted images.
     /// </summary>
     private static ExtractOutput ConvertRtfContent(string rtfContent)
     {
+        var context = new ExtractOutput();
+
         if (string.IsNullOrWhiteSpace(rtfContent))
         {
-            return new ExtractOutput { Output = string.Empty };
+            return context;
         }
 
         try
         {
             var html = RtfPipe.Rtf.ToHtml(rtfContent);
-            var plainText = HtmlToMarkdown(html);
-            return new ExtractOutput { Output = plainText.Trim() };
+            var markdown = HtmlToMarkdown(html, context.Images);
+            context.Output = markdown.Trim();
         }
         catch (Exception)
         {
-            return new ExtractOutput { Output = string.Empty };
+            context.Output = string.Empty;
         }
+
+        return context;
     }
 
     /// <summary>
-    /// Converts HTML output from RtfPipe into plain markdown text,
-    /// preserving paragraph and line breaks.
+    /// Converts HTML output from RtfPipe into markdown, extracting embedded images.
     /// </summary>
-    private static string HtmlToMarkdown(string html)
+    private static string HtmlToMarkdown(string html, List<ImageRef> images)
     {
         if (string.IsNullOrWhiteSpace(html))
             return string.Empty;
 
-        // Replace block-level elements with newlines before stripping tags
-        html = Regex.Replace(html, @"<br\s*/?>", "\n", RegexOptions.IgnoreCase);
-        html = Regex.Replace(html, @"</p>", "\n\n", RegexOptions.IgnoreCase);
-        html = Regex.Replace(html, @"</div>", "\n", RegexOptions.IgnoreCase);
-        html = Regex.Replace(html, @"</h[1-6]>", "\n\n", RegexOptions.IgnoreCase);
-        html = Regex.Replace(html, @"</li>", "\n", RegexOptions.IgnoreCase);
-        html = Regex.Replace(html, @"<li[^>]*>", "- ", RegexOptions.IgnoreCase);
-        html = Regex.Replace(html, @"</tr>", "\n", RegexOptions.IgnoreCase);
-        html = Regex.Replace(html, @"</td>|</th>", "\t", RegexOptions.IgnoreCase);
+        // Strip the outer <div> wrapper that RtfPipe wraps its output in,
+        // since Html2Markdown cannot map it to any markdown construct.
+        html = StripOuterDiv(html);
 
-        // Strip remaining HTML tags
-        html = Regex.Replace(html, @"<[^>]+>", string.Empty);
+        // Extract embedded base64 images and replace with ID-keyed markdown references
+        html = ExtractImages(html, images);
 
-        // Decode HTML entities
-        html = HttpUtility.HtmlDecode(html);
+        // Convert the remaining HTML to Markdown using Html2Markdown
+        var converter = new Converter();
+        return converter.Convert(html);
+    }
 
-        // Normalize multiple blank lines to at most two
-        html = Regex.Replace(html, @"\n{3,}", "\n\n");
+    /// <summary>
+    /// Strips the outermost &lt;div&gt; element added by RtfPipe, keeping its inner HTML.
+    /// </summary>
+    private static string StripOuterDiv(string html)
+    {
+        var trimmed = html.Trim();
+        var match = Regex.Match(trimmed, @"^<div[^>]*>(.*)</div>$", RegexOptions.Singleline | RegexOptions.IgnoreCase);
+        return match.Success ? match.Groups[1].Value : trimmed;
+    }
 
-        return html;
+    /// <summary>
+    /// Finds &lt;img&gt; tags whose src is a base64 data URI, extracts the raw bytes into
+    /// <paramref name="images"/>, and replaces the tag with a markdown image reference.
+    /// </summary>
+    private static string ExtractImages(string html, List<ImageRef> images)
+    {
+        return Regex.Replace(
+            html,
+            @"<img\s[^>]*src=""data:image/([^;]+);base64,([^""]+)""[^>]*/?>",
+            match =>
+            {
+                var format = match.Groups[1].Value.ToLowerInvariant();
+                var base64 = match.Groups[2].Value;
+
+                byte[] bytes;
+                try { bytes = Convert.FromBase64String(base64); }
+                catch { return string.Empty; }
+
+                var id = $"{Guid.NewGuid()}.{format}";
+                var raw = $"![image](data:image/{format};{id})";
+
+                images.Add(new ImageRef
+                {
+                    Id = id,
+                    Format = format,
+                    MarkdownRaw = raw,
+                    RawBytes = bytes
+                });
+
+                return raw;
+            },
+            RegexOptions.IgnoreCase);
     }
 
     #endregion
@@ -110,3 +149,4 @@ public class RtfParser : IDisposable
         GC.SuppressFinalize(this);
     }
 }
+

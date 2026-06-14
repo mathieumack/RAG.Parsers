@@ -80,6 +80,9 @@ public class RtfParser_Should
         // Assert
         Assert.IsNotNull(result);
         Assert.IsFalse(string.IsNullOrWhiteSpace(result.Output));
+        Assert.IsTrue(result.Output.Contains("café"), "Output should contain 'café' (escaped \\' sequences decoded)");
+        Assert.IsTrue(result.Output.Contains("naïve"), "Output should contain 'naïve' (escaped \\' sequences decoded)");
+        Assert.IsTrue(result.Output.Contains("€"), "Output should contain '€' (RTF unicode escape \\u8364 decoded)");
     }
 
     [TestMethod]
@@ -95,8 +98,8 @@ public class RtfParser_Should
 
         // Assert
         Assert.IsNotNull(result);
-        // Malformed RTF should return empty or gracefully handle the input
-        Assert.IsNotNull(result.Output);
+        // Malformed RTF should return empty output
+        Assert.IsTrue(string.IsNullOrEmpty(result.Output), "Malformed RTF should produce empty output");
     }
 
     [TestMethod]
@@ -112,5 +115,26 @@ public class RtfParser_Should
         // Assert
         Assert.IsNotNull(result);
         Assert.AreEqual(string.Empty, result.Output);
+    }
+
+    [TestMethod]
+    public void ToMarkdown_ExtractsImages_WhenRtfContainsEmbeddedImage()
+    {
+        // Arrange
+        var parser = new RtfParser();
+        var filePath = Path.Combine(Environment.CurrentDirectory, TestFilesDirectory, "image.rtf");
+
+        // Act
+        var result = parser.ToMarkdown(filePath);
+
+        // Assert
+        Assert.IsNotNull(result);
+        Assert.AreEqual(1, result.Images.Count, "Output should contain exactly one extracted image");
+        var image = result.Images[0];
+        Assert.IsFalse(string.IsNullOrEmpty(image.Id), "Image Id should be set");
+        Assert.AreEqual("png", image.Format, "Image format should be 'png'");
+        Assert.IsTrue(image.RawBytes.Count > 0, "Image should have non-empty raw bytes");
+        Assert.IsTrue(result.Output.Contains($"![image](data:image/png;{image.Id})"),
+            "Markdown output should contain the image reference");
     }
 }

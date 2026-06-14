@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace RAG.Parsers.Rtf.Models;
 
 /// <summary>
@@ -6,7 +8,12 @@ namespace RAG.Parsers.Rtf.Models;
 public class ExtractOutput
 {
     /// <summary>
-    /// Output text
+    /// List of refs to images extracted from the document
+    /// </summary>
+    public List<ImageRef> Images { get; set; } = new();
+
+    /// <summary>
+    /// Output text in markdown format
     /// </summary>
     public string Output { get; set; } = "";
 }

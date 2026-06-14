@@ -10,11 +10,15 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="TestFiles\image.rtf" />
     <None Remove="TestFiles\sample.rtf" />
     <None Remove="TestFiles\unicode.rtf" />
   </ItemGroup>
 
   <ItemGroup>
+    <Content Include="TestFiles\image.rtf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="TestFiles\sample.rtf">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
